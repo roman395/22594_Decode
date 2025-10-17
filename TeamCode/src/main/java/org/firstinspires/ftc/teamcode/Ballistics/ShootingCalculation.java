@@ -88,7 +88,7 @@ public class ShootingCalculation
         }
     }
 
-    public Vector GetVelocity(double[] robotVelocity, double[] landingSpot, double distToGoal, double wallSlopeAngle) // x is codirectional to the direction that the camera is pointing in, z is vertical
+    public static Vector GetVelocity(double[] robotVelocity, double[] landingSpot, double distToGoal, double wallSlopeAngle) // x is codirectional to the direction that the camera is pointing in, z is vertical
     {
         F func1 = new F();
         class Fun extends MatrixFunction
