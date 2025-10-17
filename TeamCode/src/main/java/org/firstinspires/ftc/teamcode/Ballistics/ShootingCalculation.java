@@ -1,5 +1,9 @@
 package org.firstinspires.ftc.teamcode.Ballistics;
 
+import static org.firstinspires.ftc.teamcode.Ballistics.Constants.AirDensity;
+import static org.firstinspires.ftc.teamcode.Ballistics.Constants.BallMass;
+import static org.firstinspires.ftc.teamcode.Ballistics.Constants.CrossSectionalArea;
+import static org.firstinspires.ftc.teamcode.Ballistics.Constants.DragConstant;
 import static org.firstinspires.ftc.teamcode.Ballistics.Constants.NullFunctionMatrix;
 
 import org.firstinspires.ftc.teamcode.Ballistics.Math.GeneralMath;
@@ -21,9 +25,11 @@ public class ShootingCalculation
         {
             Matrix retval = new Matrix(3);
 
-            retval.element(0, 0, OptionalDouble.of(func.execute(NullFunctionMatrix, new Matrix(3, t)).Size() * func.executeIndexed(0, 0, NullFunctionMatrix, new Matrix(t)) * Constants.DragBigConstant));
-            retval.element(0, 1, OptionalDouble.of(func.execute(NullFunctionMatrix, new Matrix(3, t)).Size() * func.executeIndexed(0, 1, NullFunctionMatrix, new Matrix(t)) * Constants.DragBigConstant));
-            retval.element(0, 2, OptionalDouble.of(func.execute(NullFunctionMatrix, new Matrix(3, t)).Size() * func.executeIndexed(0, 2, NullFunctionMatrix, new Matrix(t)) * Constants.DragBigConstant - Constants.g));
+            final double DragBigConstant = -AirDensity * DragConstant * CrossSectionalArea / (2 * BallMass);
+
+            retval.element(0, 0, OptionalDouble.of(func.execute(NullFunctionMatrix, new Matrix(3, t)).Size() * func.executeIndexed(0, 0, NullFunctionMatrix, new Matrix(t)) * DragBigConstant));
+            retval.element(0, 1, OptionalDouble.of(func.execute(NullFunctionMatrix, new Matrix(3, t)).Size() * func.executeIndexed(0, 1, NullFunctionMatrix, new Matrix(t)) * DragBigConstant));
+            retval.element(0, 2, OptionalDouble.of(func.execute(NullFunctionMatrix, new Matrix(3, t)).Size() * func.executeIndexed(0, 2, NullFunctionMatrix, new Matrix(t)) * DragBigConstant - Constants.g));
 
             return retval;
         }

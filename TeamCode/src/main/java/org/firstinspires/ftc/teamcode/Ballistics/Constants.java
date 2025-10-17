@@ -7,12 +7,14 @@ public class Constants
 {
     public static final NullFunc NullFunctionDouble = new NullFunc();
     public static final NullFuncMatrix NullFunctionMatrix = new NullFuncMatrix();
-    public static final double DragBigConstant = 69, // TODO: Calculate constant, SI OR IMPERIAL????
-            g = 9.81, // TODO: Use SI or imperial?
-            Goal = 67, // TODO: Input distance to which throw the ball away from the wall
-            Height = 41, // TODO: Input wall height
-            HeightError = 30, // TODO: Input this, this === any room for the ball to not hit the wall
-            BallRadius = 42, // SI??? IMPERIAL???
+    public static final double DragConstant = 69, // TODO: Calculate constant, dimensionless
+            AirDensity = 1.225, // kg / m^3
+            g = 9.81, // m / s^2
+            Height = 0.9845, // m
+            HeightError = 0.01, // TODO: Input this, this === any room for the ball to not hit the wall, m
+            BallRadius = 0.0635, // m
+            BallMass = 0.0748, // kg
+            CrossSectionalArea = 0.1995, // m^2
             Step = 0.01, // Step for DiffEq, Newton and integration
             Precision = 0.001; // Precision for Newton's method
 }
