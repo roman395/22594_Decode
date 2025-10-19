@@ -12,6 +12,7 @@ buildscript {
     dependencies {
         // Note for FTC Teams: Do not modify this yourself.
         classpath 'com.android.tools.build:gradle:8.7.0'
+        implementation 'com.github.PedroVR:PedroPathing:1.0' //ivanis 19.10, pedropathing
     }
 }
 
