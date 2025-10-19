@@ -25,4 +25,5 @@ android {
 
 dependencies {
     implementation project(':FtcRobotController')
+    implementation 'com.github.PedroVR:PedroPathing:1.0'
 }
