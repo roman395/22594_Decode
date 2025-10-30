@@ -5,6 +5,7 @@ import android.util.Size;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
@@ -19,15 +20,14 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 
 import java.util.List;
-
-
-@TeleOp
 public class AprilTagsDetection {
     private AprilTagProcessor aprilTag;
-
-    Telemetry dash = FtcDashboard.getInstance().getTelemetry();
-    private void initAprilTag() {
-
+    private HardwareMap hmap;
+    private VisionPortal visionPortal;
+    Telemetry dash;
+    public AprilTagsDetection(LinearOpMode mode, Telemetry dash) {
+        this.dash = dash;
+        hmap = mode.hardwareMap;
         // Create the AprilTag processor.
         aprilTag = new AprilTagProcessor.Builder()
                 // The following default settings are available to un-comment and edit as needed.
@@ -58,11 +58,8 @@ public class AprilTagsDetection {
         // Create the vision portal by using a builder.
         VisionPortal.Builder builder = new VisionPortal.Builder();
         // Set the camera (webcam vs. built-in RC phone camera).
-        if (USE_WEBCAM) {
-            builder.setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"));
-        } else {
-            builder.setCamera(BuiltinCameraDirection.BACK);
-        }
+        builder.setCamera(hmap.get(WebcamName.class, "Webcam 1"));
+
 
         // Choose a camera resolution. Not all cameras support all resolutions.
         builder.setCameraResolution(new Size(640, 480));
@@ -114,6 +111,12 @@ public class AprilTagsDetection {
         dash.addLine("\nkey:\nXYZ = X (Right), Y (Forward), Z (Up) dist.");
         dash.addLine("PRY = Pitch, Roll & Yaw (XYZ Rotation)");
         dash.addLine("RBE = Range, Bearing & Elevation");
+        dash.update();
 
     }   // end method dashAprilTag()
+
+    public void TeleOp(){
+        dashAprilTag();
+    }
+    public VisionPortal getPortal() {return visionPortal;}
 }
