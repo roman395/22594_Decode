@@ -27,11 +27,12 @@ public class MotorToolKit extends LinearOpMode {
     DcMotor motor1;
     DcMotor motor2;
     DcMotor motor3;
+
     @Override
     public void runOpMode() throws InterruptedException {
         TelemetryManager tel = PanelsTelemetry.INSTANCE.getTelemetry();
         waitForStart();
-        while (opModeIsActive()){
+        while (opModeIsActive()) {
             motor1 = hardwareMap.tryGet(DcMotor.class, name1);
             motor2 = hardwareMap.tryGet(DcMotor.class, name2);
             motor3 = hardwareMap.tryGet(DcMotor.class, name3);

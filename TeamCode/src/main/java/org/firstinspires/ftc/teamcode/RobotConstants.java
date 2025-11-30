@@ -1,16 +1,19 @@
 package org.firstinspires.ftc.teamcode;
 
+import org.firstinspires.ftc.teamcode.Modules.Shooter;
+
 public class RobotConstants
 {
-    public static final String MecanumFL = "Front Left Motor",
-            MecanumFR = "Front Right Motor",
-            MecanumRL = "Rear Left Motor",
-            MecanumRR = "Rear Right Motor",
+    public static final String MecanumFL = "FLM",
+            MecanumFR = "FRM",
+            MecanumRL = "RLM",
+            MecanumRR = "RRM",
 
-            IntakeMotor = "Intake Motor",
-
+            IntakeMotor = "intake",
             TurretServo1 = "Turret Servo 1",
             TurretServo2 = "Turret Servo 2",
-
-            ShooterMotor = "Shooter Motor";
+            ShootServoR = "shootSL",
+            ShootServoL = "shootSR",
+            ShootLeft = "shootL",
+            ShootRight = "shootR";
 }
