@@ -16,8 +16,8 @@ public class Constants {
     public static FollowerConstants followerConstants = new FollowerConstants()
             .mass(10);
     public static TwoWheelConstants TWC = new TwoWheelConstants()
-            .forwardEncoder_HardwareMapName(RobotConstants.MecanumFL)
-            .strafeEncoder_HardwareMapName(RobotConstants.MecanumFR)
+            .forwardEncoder_HardwareMapName(RobotConstants.ForwardEncoder)
+            .strafeEncoder_HardwareMapName(RobotConstants.StrafeEncoder)
             .forwardPodY(1)
             .strafePodX(1)
             //.forwardTicksToInches(1)

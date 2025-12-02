@@ -8,6 +8,8 @@ public class RobotConstants
             MecanumFR = "FRM",
             MecanumRL = "RLM",
             MecanumRR = "RRM",
+            StrafeEncoder = "RRM",
+            ForwardEncoder = "forwardEncoder",
 
             IntakeMotor = "intake",
             TurretServo1 = "Turret Servo 1",

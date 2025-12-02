@@ -24,6 +24,7 @@ public class Mecanum {
 
         FR.setDirection(DcMotorSimple.Direction.REVERSE);
         FL.setDirection(DcMotorSimple.Direction.REVERSE);
+        RR.setDirection(DcMotorSimple.Direction.REVERSE);
         RL.setDirection(DcMotorSimple.Direction.REVERSE);
         gamepad = lom.gamepad1;
     }
@@ -31,7 +32,7 @@ public class Mecanum {
     public void TeleOp() {
         double y = -gamepad.left_stick_y;
         double x = gamepad.left_stick_x * 1.1; // Counteract imperfect strafing
-        double rx = -(gamepad.right_trigger - gamepad.left_trigger) * 0.75;
+        double rx = (gamepad.right_trigger - gamepad.left_trigger) * 0.75;
 
         // Denominator is the largest motor power (absolute value) or 1
         // This ensures all the powers maintain the same ratio,

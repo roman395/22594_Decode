@@ -13,16 +13,17 @@ public class Intake {
 
     public Intake(LinearOpMode lom) {
         motor = lom.hardwareMap.get(DcMotor.class, RobotConstants.IntakeMotor);
-        motor.setDirection(DcMotorSimple.Direction.REVERSE);
+        motor.setDirection(DcMotorSimple.Direction.FORWARD);
         g = lom.gamepad1;
     }
 
     public void TeleOp() {
-        if (g.left_bumper)
-            motor.setPower(-1);
-        else if (g.right_bumper)
+        if (g.right_bumper)
             motor.setPower(1);
+        else if(g.left_bumper)
+            motor.setPower(-1);
         else
             motor.setPower(0);
+
     }
 }
