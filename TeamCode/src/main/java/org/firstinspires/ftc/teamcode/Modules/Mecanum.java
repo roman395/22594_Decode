@@ -25,17 +25,20 @@ public class Mecanum {
         RL.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         FR.setDirection(DcMotorSimple.Direction.REVERSE);
-        FL.setDirection(DcMotorSimple.Direction.REVERSE);
+        FL.setDirection(DcMotorSimple.Direction.FORWARD);
         RR.setDirection(DcMotorSimple.Direction.FORWARD);
         RL.setDirection(DcMotorSimple.Direction.FORWARD);
         gamepad = lom.gamepad1;
     }
 
     public void TeleOp() {
-        double y = -gamepad.left_stick_y;
-        double x = gamepad.left_stick_x * 1.1; // Counteract imperfect strafing
         double slower = gamepad.cross ? 0.25 : 0.75;
+        double slowerMove = gamepad.cross ? 0.25 : 1;
+
+        double y = -gamepad.left_stick_y * slowerMove;
+        double x = gamepad.left_stick_x * 1.1 * slowerMove; // Counteract imperfect strafing
         double rx = (gamepad.right_trigger - gamepad.left_trigger) * slower;
+        //double rx = gamepad.right_stick_x* slower;
         // Denominator is the largest motor power (absolute value) or 1
         // This ensures all the powers maintain the same ratio,
         // but only if at least one is out of the range [-1, 1]
@@ -54,8 +57,9 @@ public class Mecanum {
     public void ResetTimer() {
         timer.reset();
     }
+    public ElapsedTime GetTimer(){return timer;}
 
-    public boolean Autonom(double time, double power) {
+    public boolean ForwardMove(double time, double power) {
         if (time > timer.milliseconds()) {
             FL.setPower(power);
             FR.setPower(power);
@@ -71,7 +75,7 @@ public class Mecanum {
         return false;
     }
 
-    public boolean Autonom(double time, double flPower, double frPower, double rlPower, double rrPower) {
+    public boolean StrafeMove(double time, double flPower, double frPower, double rlPower, double rrPower) {
         if (time > timer.milliseconds()) {
             FL.setPower(flPower);
             FR.setPower(frPower);

@@ -14,17 +14,20 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
+import org.firstinspires.ftc.teamcode.RobotConstants;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 
 import java.util.List;
+
 public class AprilTagsDetection {
     private AprilTagProcessor aprilTag;
     private HardwareMap hmap;
     private VisionPortal visionPortal;
     Telemetry dash;
+
     public AprilTagsDetection(LinearOpMode mode, Telemetry dash) {
         this.dash = dash;
         hmap = mode.hardwareMap;
@@ -35,15 +38,15 @@ public class AprilTagsDetection {
                 //.setDrawCubeProjection(false)
                 //.setDrawTagOutline(true)
                 //.setTagFamily(AprilTagProcessor.TagFamily.TAG_36h11)
-                //.setTagLibrary(AprilTagGameDatabase.getCenterStageTagLibrary())
+                //.setTagLibrary(AprilTagGameDatabase.getCenterStageTagLibrary()
                 .setOutputUnits(DistanceUnit.MM, AngleUnit.DEGREES)
-                .setCameraPose(new Position(), new YawPitchRollAngles(AngleUnit.DEGREES,0,0,0,0))
+                .setCameraPose(new Position(), new YawPitchRollAngles(AngleUnit.DEGREES, 0, 0, 0, 0))
+
                 // == CAMERA CALIBRATION ==
                 // If you do not manually specify calibration parameters, the SDK will attempt
                 // to load a predefined calibration for your camera.
                 //.setLensIntrinsics(578.272, 578.272, 402.145, 221.506)
                 // ... these parameters are fx, fy, cx, cy.
-
                 .build();
 
         // Adjust Image Decimation to trade-off detection-range for detection-rate.
@@ -58,14 +61,13 @@ public class AprilTagsDetection {
         // Create the vision portal by using a builder.
         VisionPortal.Builder builder = new VisionPortal.Builder();
         // Set the camera (webcam vs. built-in RC phone camera).
-        builder.setCamera(hmap.get(WebcamName.class, "Webcam 1"));
-
+        builder.setCamera(hmap.get(WebcamName.class, RobotConstants.Camera));
 
         // Choose a camera resolution. Not all cameras support all resolutions.
         builder.setCameraResolution(new Size(640, 480));
 
         // Enable the RC preview (LiveView).  Set "false" to omit camera monitoring.
-        builder.enableLiveView(true);
+        builder.enableLiveView(false);
 
         // Set the stream format; MJPEG uses less bandwidth than default YUY2.
         builder.setStreamFormat(VisionPortal.StreamFormat.YUY2);
@@ -76,6 +78,7 @@ public class AprilTagsDetection {
 
         // Set and enable the processor.
         builder.addProcessor(aprilTag);
+
 
         // Build the Vision Portal, using the above settings.
         visionPortal = builder.build();
@@ -89,7 +92,7 @@ public class AprilTagsDetection {
     /**
      * Add dash about AprilTag detections.
      */
-    private void dashAprilTag() {
+    public void dashAprilTag() {
 
         List<AprilTagDetection> currentDetections = aprilTag.getDetections();
         dash.addData("# AprilTags Detected", currentDetections.size());
@@ -97,6 +100,7 @@ public class AprilTagsDetection {
         // Step through the list of detections and display info for each one.
         for (AprilTagDetection detection : currentDetections) {
             if (detection.metadata != null) {
+
                 dash.addLine(String.format("\n==== (ID %d) %s", detection.id, detection.metadata.name));
                 dash.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (MM)", detection.ftcPose.x, detection.ftcPose.y, detection.ftcPose.z));
                 dash.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", detection.ftcPose.pitch, detection.ftcPose.roll, detection.ftcPose.yaw));
@@ -115,8 +119,30 @@ public class AprilTagsDetection {
 
     }   // end method dashAprilTag()
 
-    public void TeleOp(){
+    private List<AprilTagDetection> currentDetections;
+    private AprilTagDetection lastDetection;
+
+    public void Update() {
+        currentDetections = aprilTag.getDetections();
+        for (AprilTagDetection detection : currentDetections)
+            if (detection.metadata != null)
+                lastDetection = detection;
+    }
+
+    public void TeleOp() {
         dashAprilTag();
     }
-    public VisionPortal getPortal() {return visionPortal;}
+
+    public double GetDistance(int tagID) {
+        if (lastDetection != null && lastDetection.id == tagID)
+            return lastDetection.ftcPose.range;
+        else
+            return -1;
+    }
+
+    public VisionPortal getPortal() {
+        return visionPortal;
+    }
+    public double GetBearing(){return lastDetection.ftcPose.bearing;}
+    public double GetElevation(){return lastDetection.ftcPose.elevation;}
 }

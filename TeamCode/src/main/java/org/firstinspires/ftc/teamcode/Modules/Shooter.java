@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.Modules;
 
+import com.bylazar.camerastream.PanelsCameraStream;
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -14,111 +15,195 @@ import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl;
+import org.firstinspires.ftc.teamcode.Camera.AprilTagsDetection;
 import org.firstinspires.ftc.teamcode.RobotConstants;
+import org.firstinspires.ftc.vision.VisionPortal;
+
+import java.util.concurrent.TimeUnit;
 
 @Configurable
 public class Shooter {
+    public static double approxVelCof = 0.2303, approxWallCof = 0.00058, approxVelOf = 1535.3528, approxWallOf = 0.08927;
     DcMotorImplEx leftM, rightM, forwardEncoder, strafeEncoder;
-    public static double velocity = 0;
+    public static double velocity = 2000;
     public static double pos = 0;
-    Position[] positions = {new Position(0.8, 1600), new Position(0.8, 0), new Position(0.8, 0), new Position(1, 0)};
+    public AprilTagsDetection detect;
     int current_pos = 0;
     Servo rightS, leftS;
     Gamepad g;
     Telemetry t;
-    public static PIDCoefficients pid = new PIDCoefficients(0.004, 0, 0.01);
+    public static PIDCoefficients pid = new PIDCoefficients(0.013, 0, 0.005);
     ElapsedTime timer = new ElapsedTime();
-    private double current_velocity = 0;
-    private boolean isShooting = false, isFirstIntake = false;
+    private double current_velocity = 1800;
+    private boolean isShooting = false, isFirstIntake = false, isRumble;
     ElapsedTime pidTimer = new ElapsedTime();
+    ExposureControl control;
+    public static boolean useCamera = true, usePhysic = false;
+    double max_i = 0;
 
-    public Shooter(LinearOpMode lom) {
+    public Shooter(LinearOpMode lom, Telemetry tel) {
         g = lom.gamepad1;
-        t = lom.telemetry;
+        t = tel;
 
         leftM = lom.hardwareMap.get(DcMotorImplEx.class, RobotConstants.ShootLeft);
         rightM = lom.hardwareMap.get(DcMotorImplEx.class, RobotConstants.ShootRight);
         rightS = lom.hardwareMap.get(Servo.class, RobotConstants.ShootServoR);
         leftS = lom.hardwareMap.get(Servo.class, RobotConstants.ShootServoL);
-        leftM.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        rightM.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        leftM.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        rightM.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         leftM.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-
         rightM.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        rightM.setDirection(DcMotorSimple.Direction.REVERSE);
         forwardEncoder = lom.hardwareMap.get(DcMotorImplEx.class, RobotConstants.ForwardEncoder);
         strafeEncoder = lom.hardwareMap.get(DcMotorImplEx.class, RobotConstants.StrafeEncoder);
 
         leftS.setDirection(Servo.Direction.REVERSE);
+        detect = new AprilTagsDetection(lom, t);
+        getVisionPortal().resumeStreaming();
+        getVisionPortal().resumeLiveView();
+        PanelsCameraStream.INSTANCE.startStream(getVisionPortal(), 30);
+        control = getVisionPortal().getCameraControl(ExposureControl.class);
+        control.setMode(ExposureControl.Mode.Manual);
+        control.setExposure(3, TimeUnit.MILLISECONDS);
 
-        leftS.setPosition(positions[current_pos].wallPosition);
-        rightS.setPosition(positions[current_pos].wallPosition);
-        current_velocity = positions[current_pos].velocity;
     }
 
-    public void VelocityTests(double velocity, double pos) {
-        PID(rightM, leftM, velocity);
+    private void Telemetry() {
+        if (useCamera)
+            t.addData("distance", detect.GetDistance(24));
+        t.addData("right velocity", rightM.getVelocity());
+        t.addData("left velocity", leftM.getVelocity());
+        t.addData("time", current_time);
+        t.addData("current velocity", current_velocity);
+        t.addData("error", current_error);
+        t.addData("changed velocity", output);
+        t.addData("power", leftM.getPower());
+        t.addData("wall", pos);
+    }
+
+    public void VelocityTests(double velocity, double pos, int id, boolean isCameraUse) {
+        detect.Update();
+        t.addData("distance", detect.GetDistance(id));
+        if (isCameraUse) {
+            PID(rightM, leftM, DistToVelocity(detect.GetDistance(id)));
+            leftS.setPosition(DistToWallPose(detect.GetDistance(id)));
+        } else
+            PID(rightM, leftM, velocity);
         leftS.setPosition(pos);
         rightS.setPosition(pos);
         t.addData("right velocity", rightM.getVelocity());
         t.addData("left velocity", leftM.getVelocity());
         t.addData("time", current_time);
+        t.addData("current velocity", velocity);
         t.addData("error", current_error);
         t.addData("changed velocity", output);
-        t.addData("power", rightM.getPower());
-
+        t.addData("power", leftM.getPower());
+        t.addData("wall", pos);
     }
 
-    public void TeleOp() {
-        Testing(velocity, pos);
-        if(isShooting && !g.triangle && !g.right_bumper)
-          PID(rightM, leftM, current_velocity);
-        if (g.rightBumperWasReleased())
-            timer.reset();
-        if (g.rightBumperWasPressed() && !isFirstIntake)
-            isFirstIntake = true;
-        if (g.circle) {
-            isShooting = true;
-        } else if (g.square) {
-            PID(rightM, leftM, 0);
-            isShooting = false;
-        } else if (!isShooting && (g.right_bumper || timer.milliseconds() < 1500) && isFirstIntake) {
-            leftM.setPower(-0.4);
-            rightM.setPower(-0.4);
-        } else if (!g.right_bumper && isShooting)
-            PID(rightM, leftM, current_velocity);
-        else if (!g.right_bumper && !isShooting && !g.triangle)
-            PID(rightM, leftM, 0);
+    public void TeleOp(Intake intake, int id) {
+        //Testing(velocity, pos);
+        if (g.startWasPressed())
+            useCamera = !useCamera;
 
-        else if (g.triangle && !isShooting) {
+        detect.Update();
+        if (detect.GetDistance(id) != -1 && useCamera) {
+            if (!usePhysic) {
+                current_velocity = DistToVelocity(detect.GetDistance(id));
+                pos = DistToWallPose(detect.GetDistance(id));
+            } else {
+                pos = LaunchAngleToServo(DistToLaunchAngle(detect.GetElevation()));
+                current_velocity = VelocityToTPS(DistToVelocityPhysic(detect.GetDistance(id) / 1000, DistToLaunchAngle(detect.GetElevation())));
+                t.addData("Velocity Physic", current_velocity);
+                t.addData("pos Physic", pos);
+                t.addData("angle degree",Math.toDegrees(DistToLaunchAngle(detect.GetElevation())));
+                t.addData("elevation", detect.GetElevation());
+            }
+            if (isShooting) {
+                if (isRumble)
+                    t.addLine("RumblingTime!");
+                if (Math.abs(detect.GetBearing()) < 10 && Math.abs(detect.GetBearing()) > 7 && !isRumble) {
+                    g.rumble(500);
+                    isRumble = true;
+                } else if (isRumble && !(Math.abs(detect.GetBearing()) < 10 && Math.abs(detect.GetBearing()) > 7))
+                    isRumble = false;
+            }
+        } else if (!useCamera && !usePhysic)
+            current_velocity = velocity;
+        leftS.setPosition(pos);
+        rightS.setPosition(pos);
+        if (isShooting) PID(rightM, leftM, current_velocity);
+        if (g.rightBumperWasReleased()) timer.reset();
+        if (g.rightBumperWasPressed() && !isFirstIntake) isFirstIntake = true;
+        if (g.circle)
+            isShooting = true;
+        else if (g.square) {
+            leftM.setPower(-0);
+            rightM.setPower(-0);
+            isShooting = false;
+        }
+        if (!isShooting && (g.right_bumper || timer.milliseconds() < 1500) && isFirstIntake) {
+            leftM.setPower(-0.6);
+            rightM.setPower(-0.6);
+        }
+        if (g.right_bumper && !isShooting)
+            intake.ShooterEnable(1);
+        else if (isShooting && g.right_bumper)
+            intake.ShooterEnable(0.6);
+        else if (g.left_bumper)
+            intake.ShooterEnable(-0.6);
+        else
+            intake.ShooterEnable(0);
+
+        if (!g.right_bumper && !isShooting && !g.triangle) {
+            leftM.setPower(-0);
+            rightM.setPower(-0);
+        }
+
+        if (g.triangle && !isShooting) {
             leftM.setPower(-0.5);
             rightM.setPower(-0.5);
         }
-        else if (!g.triangle && !isShooting)
-            PID(rightM, leftM, 0);
+        if (!useCamera) {
+            g.setLedColor(255, 0, 0, 1000);
+            if (g.dpadLeftWasPressed())
+                current_velocity -= 50;
+            else if (g.dpadRightWasPressed())
+                current_velocity += 50;
+            if (g.dpadUpWasPressed())
+                pos += 0.05;
+            else if (g.dpadDownWasPressed())
+                pos -= 0.05;
+        } else {
+            g.setLedColor(0, 255, 0, 1000);
 
-
-        t.addData("right velocity", rightM.getVelocity());
-        t.addData("left velocity", leftM.getVelocity());
-        t.addData("time", current_time);
-        t.addData("error", current_error);
-        t.addData("changed velocity", output);
-        t.addData("power", rightM.getPower());
+            if (g.dpadLeftWasPressed())
+                approxVelCof -= 0.01;
+            else if (g.dpadRightWasPressed())
+                approxVelCof += 0.01;
+        }
+        Telemetry();
     }
 
     public void ResetTimer() {
         timer.reset();
     }
 
-    public void ResetPIDTimer() {
-        pidTimer.reset();
+    public void Update() {
+        detect.Update();
     }
 
-    public boolean Autonom(double time, double power, double wallPose) {
-        leftS.setPosition(wallPose);
-        rightS.setPosition(wallPose);
+    public boolean Autonom(double time, int id) {
+        if (detect.GetDistance(id) != -1) {
+            current_velocity = DistToVelocity(detect.GetDistance(id));
+            pos = DistToWallPose(detect.GetDistance(id));
+        }
+        leftS.setPosition(pos);
+        rightS.setPosition(pos);
         if (time > timer.milliseconds()) {
-            rightM.setPower(power);
-            leftM.setPower(power);
+            PID(rightM, leftM, current_velocity);
         } else {
             rightM.setPower(0);
             leftM.setPower(0);
@@ -127,40 +212,56 @@ public class Shooter {
         return false;
     }
 
-    double current_time = 0, current_error = 0, previous_time = 0, previous_error = 0, output, previous_output;
+    double current_time = 0, current_error = 0, previous_time = 0, previous_error = 0, output, previous_output, i = 0, p, d;
 
     private void PID(DcMotorEx motorR, DcMotorEx motorL, double targetVelocity) {
         current_time = pidTimer.milliseconds();
         current_error = targetVelocity - motorL.getVelocity();
+        p = pid.p * current_error;
+        i += pid.i * (current_error * (current_time - previous_time));
+        d = pid.d * (current_error - previous_error) / (current_time - previous_time);
+        if (i > max_i) i = max_i;
+        else if (i < -max_i) i = -max_i;
+        output = p + i + d;
+        if (targetVelocity != 0) {
+            motorR.setPower(output);
+            motorL.setPower(output);
+        } else {
+            motorR.setPower(0);
+            motorL.setPower(0);
+        }
 
-        output = pid.p * current_error + pid.d * (current_error - previous_error) / (current_time - previous_time);
-
-        motorR.setPower(output);
-        motorL.setPower(output);
-        if (output != 0)
-            previous_output = output;
         previous_error = current_error;
         previous_time = current_time;
     }
-    public void Testing(double velocity, double pos){
-        leftS.setPosition(pos);
-        rightS.setPosition(pos);
-        current_velocity = velocity;
+
+    private double DistToVelocity(double dist) {
+        //if(dist < 2000)
+        return dist * approxVelCof + approxVelOf;
+
     }
-    public void PositionsListing() {
-        if (g.dpadUpWasPressed() && current_pos + 1 < positions.length) {
-            current_pos++;
-            leftS.setPosition(positions[current_pos].wallPosition);
-            rightS.setPosition(positions[current_pos].wallPosition);
-            current_velocity = positions[current_pos].velocity;
-        } else if (g.dpadDownWasPressed() && current_pos - 1 >= 0) {
-            current_pos--;
-            leftS.setPosition(positions[current_pos].wallPosition);
-            rightS.setPosition(positions[current_pos].wallPosition);
-            current_velocity = positions[current_pos].velocity;
-        }
+
+    private double DistToWallPose(double dist) {
+        return Math.min(dist * approxWallCof - approxWallOf, 0.95);
+    }
+
+    public VisionPortal getVisionPortal() {
+        return detect.getPortal();
+    }
+
+    private double DistToLaunchAngle(double elevation) {
+        return Math.atan(Math.tan(Math.toRadians(elevation)));
+    }
+
+    private double LaunchAngleToServo(double angle) {
+        return Math.toDegrees(angle) / 180 * 0.95;
+    }
+
+    private double DistToVelocityPhysic(double dist, double launchAngle) {
+        return Math.sqrt(9.81 * dist / Math.sin(2 * launchAngle));
+    }
+
+    private double VelocityToTPS(double velocity) {
+        return (28 * 28 / 22.0 * velocity) / (Math.PI * 0.072);
     }
 }
-
-//wall position 1
-//power 0.8 near, power 1 far

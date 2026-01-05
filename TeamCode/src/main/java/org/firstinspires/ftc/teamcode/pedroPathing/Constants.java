@@ -6,6 +6,7 @@ import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.FollowerConstants;
 import com.pedropathing.ftc.FollowerBuilder;
 import com.pedropathing.ftc.drivetrains.MecanumConstants;
+import com.pedropathing.ftc.localization.Encoder;
 import com.pedropathing.ftc.localization.constants.TwoWheelConstants;
 import com.pedropathing.paths.PathConstraints;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
@@ -16,15 +17,15 @@ import org.firstinspires.ftc.teamcode.RobotConstants;
 
 public class Constants {
     public static FollowerConstants followerConstants = new FollowerConstants()
-            .forwardZeroPowerAcceleration(-33)
-            .lateralZeroPowerAcceleration(-65)
+            .forwardZeroPowerAcceleration(-31.6)
+            .lateralZeroPowerAcceleration(-51.98)
             .useSecondaryDrivePIDF(false)
             .useSecondaryHeadingPIDF(false)
             .useSecondaryTranslationalPIDF(false)
-            //.translationalPIDFCoefficients(new PIDFCoefficients(0.05,0,0,0))
+            .translationalPIDFCoefficients(new PIDFCoefficients(0.15,0,0.01,0.04))
             //.secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(0,0,0,0))
-            //.headingPIDFCoefficients(new PIDFCoefficients(0.67,0.001,0.01,0.02))
-            //.secondaryHeadingPIDFCoefficients(new PIDFCoefficients(0,0,0,0))
+            .headingPIDFCoefficients(new PIDFCoefficients(0.5,0.001,0.005,0.03))
+            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(2,0,0.08,0.01))
             //.drivePIDFCoefficients(new FilteredPIDFCoefficients(0,0,0,0,0))
             //.secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(0,0,0,0,0))
             .mass(10);
@@ -33,8 +34,10 @@ public class Constants {
             .strafeEncoder_HardwareMapName(RobotConstants.StrafeEncoder)
             .forwardPodY(1)
             .strafePodX(-6.22)
-            .forwardTicksToInches(0.0021)
-            .strafeTicksToInches(-0.0021)
+            .forwardTicksToInches(0.002)
+            .strafeTicksToInches(-0.0019)
+            .forwardEncoderDirection(Encoder.FORWARD)
+            .strafeEncoderDirection(Encoder.FORWARD)
             .IMU_HardwareMapName("imu")
             .IMU_Orientation(
                     new RevHubOrientationOnRobot(
@@ -44,16 +47,16 @@ public class Constants {
             );
     public static MecanumConstants train = new MecanumConstants()
             .maxPower(1)
-            .xVelocity(76.7)
-            .yVelocity(60)
+            .xVelocity(72)
+            .yVelocity(53)
             .rightFrontMotorName(RobotConstants.MecanumFR)
             .leftFrontMotorName(RobotConstants.MecanumFL)
             .leftRearMotorName(RobotConstants.MecanumRL)
             .rightRearMotorName(RobotConstants.MecanumRR)
             .rightFrontMotorDirection(DcMotorSimple.Direction.REVERSE)
-            .leftRearMotorDirection(DcMotorSimple.Direction.REVERSE)
-            .leftFrontMotorDirection(DcMotorSimple.Direction.REVERSE)
-            .rightRearMotorDirection(DcMotorSimple.Direction.REVERSE);
+            .leftRearMotorDirection(DcMotorSimple.Direction.FORWARD)
+            .leftFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
+            .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD);
 
     public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
 

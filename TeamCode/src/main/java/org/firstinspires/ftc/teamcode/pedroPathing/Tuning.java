@@ -1079,6 +1079,7 @@ class Triangle extends OpMode {
      * This runs the OpMode, updating the Follower as well as printing out the debug statements to
      * the Telemetry, as well as the Panels.
      */
+
     @Override
     public void loop() {
         follower.update();
@@ -1087,6 +1088,7 @@ class Triangle extends OpMode {
         if (follower.atParametricEnd()) {
             follower.followPath(triangle, true);
         }
+
     }
 
     @Override

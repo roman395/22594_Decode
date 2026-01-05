@@ -7,12 +7,10 @@ import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
-import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 
-
-public class AutonomBlueBig extends LinearOpMode {
+public class AutonomRedBig extends LinearOpMode {
     private TelemetryManager panelsTelemetry; // Panels Telemetry instance
     public Follower follower; // Pedro Pathing follower instance
     private int pathState; // Current autonomous path state (state machine)
@@ -104,10 +102,9 @@ public class AutonomBlueBig extends LinearOpMode {
     }
 
     public int autonomousPathUpdate() {
-        switch(pathState){
-            case 0:
-                follower.followPath(paths.Takespike1);
-        }
+        // Add your state machine Here
+        // Access paths with paths.pathName
+        // Refer to the Pedro Pathing Docs (Auto Example) for an example state machine
         return pathState;
     }
 }

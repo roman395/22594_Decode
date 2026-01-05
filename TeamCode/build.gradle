@@ -17,7 +17,7 @@ apply from: '../build.dependencies.gradle'
 
 android {
     namespace = 'org.firstinspires.ftc.teamcode'
-    compileSdk 35
+    compileSdk 36
     defaultConfig {
         minSdk 24
     }
@@ -28,5 +28,6 @@ android {
 
 dependencies {
     implementation project(':FtcRobotController')
+    //noinspection Aligned16KB
     implementation 'org.openftc:apriltag:2.1.0'
 }
