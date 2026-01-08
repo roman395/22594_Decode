@@ -2,17 +2,14 @@ package org.firstinspires.ftc.teamcode.Modules;
 
 import com.bylazar.camerastream.PanelsCameraStream;
 import com.bylazar.configurables.annotations.Configurable;
-import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorImplEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
-import com.qualcomm.robotcore.hardware.PIDCoefficients;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -34,14 +31,25 @@ public class Shooter {
     Servo rightS, leftS;
     Gamepad g;
     Telemetry t;
-    public static PIDFCoefficients pid = new PIDFCoefficients(0.013, 0, 0.001, 0);
+    public static PIDFCoefficients pid = new PIDFCoefficients(0.001, 0.0001, 0.0009, 0);
+    // ВАЖНО: Добавлен коэффициент Feed-Forward (F)
+    public static double feedForward = 0.78; // Настраиваемое значение F
+
     ElapsedTime timer = new ElapsedTime();
     private double current_velocity = 1800;
     private boolean isShooting = false, isFirstIntake = false, isRumble;
     ElapsedTime pidTimer = new ElapsedTime();
     ExposureControl control;
     public static boolean useCamera = true, usePhysic = false;
-    double max_i = 0;
+
+    // Добавлены константы для PID
+    private static final double MAX_POWER = 0.99; // Максимальная мощность для защиты моторов
+    private double integralSum = 0.0; // Переменная для накопления интегральной компоненты
+    private double lastError = 0.0;   // Последняя ошибка для расчета производной
+    private double lastTime = 0.0;    // Время последнего вызова PID
+
+    // PID переменные (теперь используются более логично)
+    private double current_time = 0, current_error = 0, output = 0;
 
     public Shooter(LinearOpMode lom, Telemetry tel) {
         g = lom.gamepad1;
@@ -67,7 +75,6 @@ public class Shooter {
         control = getVisionPortal().getCameraControl(ExposureControl.class);
         control.setMode(ExposureControl.Mode.Manual);
         control.setExposure(3, TimeUnit.MILLISECONDS);
-
     }
 
     private void Telemetry() {
@@ -75,12 +82,14 @@ public class Shooter {
             t.addData("distance", detect.GetDistance(24));
         t.addData("right velocity", rightM.getVelocity());
         t.addData("left velocity", leftM.getVelocity());
-        t.addData("time", current_time);
         t.addData("current velocity", current_velocity);
         t.addData("error", current_error);
-        t.addData("changed velocity", output);
-        t.addData("power", leftM.getPower());
-        t.addData("wall", pos);
+        t.addData("output power", output);
+        t.addData("left motor power", leftM.getPower());
+        t.addData("right motor power", rightM.getPower());
+        t.addData("wall servo pos", pos);
+        t.addData("feedForward", feedForward);
+        t.addData("integralSum", integralSum);
     }
 
     public double VelocityTests(double velocity, double pos, int id, boolean isCameraUse) {
@@ -93,63 +102,83 @@ public class Shooter {
             PID(rightM, leftM, velocity);
         leftS.setPosition(pos);
         rightS.setPosition(pos);
-        t.addData("right velocity", rightM.getVelocity());
-        t.addData("left velocity", leftM.getVelocity());
-        t.addData("time", current_time);
-        t.addData("current velocity", velocity);
-        t.addData("error", current_error);
-        t.addData("changed velocity", output);
-        t.addData("power", leftM.getPower());
-        t.addData("wall", pos);
         return current_error;
     }
 
     public double TeleOp(Intake intake, int id) {
-        //Testing(velocity, pos);
-        if (g.startWasPressed())
-            useCamera = !useCamera;
         detect.Update();
+
+        // Получаем целевые значения
         if (detect.GetDistance(id) != -1 && useCamera) {
             if (!isShooting || g.left_stick_x != 0 || g.left_stick_y != 0 || (g.right_trigger - g.left_trigger) != 0) {
                 current_velocity = DistToVelocity(detect.GetDistance(id));
                 pos = DistToWallPose(detect.GetDistance(id));
             }
-        } else if (!useCamera && !usePhysic)
+        } else if (!useCamera && !usePhysic) {
             current_velocity = velocity;
+        }
+
+        // Управление серво
         leftS.setPosition(pos);
         rightS.setPosition(pos);
-        if (isShooting) PID(rightM, leftM, current_velocity);
+
+        // Управление шутером
+        if (isShooting) {
+            PID(rightM, leftM, current_velocity);
+        }
+
+        // Логика кнопок для стрельбы
         if (g.rightBumperWasReleased()) timer.reset();
         if (g.rightBumperWasPressed() && !isFirstIntake) isFirstIntake = true;
-        if (g.circle)
+
+        if (g.circle) {
             isShooting = true;
-        else if (g.square) {
-            leftM.setPower(-0);
-            rightM.setPower(-0);
+        } else if (g.square) {
+            leftM.setPower(0);  // Исправлено: было -0
+            rightM.setPower(0); // Исправлено: было -0
             isShooting = false;
+            integralSum = 0;    // Сбрасываем интеграл при остановке
         }
+
+        // Обратная подача шариков (reverse feed)
         if (!isShooting && (g.right_bumper || timer.milliseconds() < 1500) && isFirstIntake) {
             leftM.setPower(-0.6);
             rightM.setPower(-0.6);
+            integralSum = 0; // Сбрасываем интеграл при реверсе
         }
-        if (g.right_bumper && !isShooting)
+
+        // Управление интейком (подачей шариков)
+        boolean shouldFeed = false;
+        if (g.right_bumper && !isShooting) {
+            shouldFeed = true;
+        } else if (isShooting && g.right_bumper && Math.abs(current_error) < 110) {
+            // Критически важно: подаем ТОЛЬКО когда скорость стабилизирована
+            shouldFeed = true;
+        }
+
+        if (shouldFeed) {
             intake.ShooterEnable(1);
-        else if (isShooting && g.right_bumper && Math.abs(current_error) < 110)
-            intake.ShooterEnable(1);
-        else if (g.left_bumper)
+        } else if (g.left_bumper) {
             intake.ShooterEnable(-0.6);
-        else
+        } else {
             intake.ShooterEnable(0);
-
-        if (!g.right_bumper && !isShooting && !g.triangle) {
-            leftM.setPower(-0);
-            rightM.setPower(-0);
         }
 
+        // Остановка моторов когда не нужно
+        if (!g.right_bumper && !isShooting && !g.triangle) {
+            leftM.setPower(0);
+            rightM.setPower(0);
+            integralSum = 0;
+        }
+
+        // Режим медленного вращения для отладки
         if (g.triangle && !isShooting) {
             leftM.setPower(-0.5);
             rightM.setPower(-0.5);
+            integralSum = 0;
         }
+
+        // Настройка параметров с джойстика
         if (!useCamera) {
             g.setLedColor(255, 0, 0, 1000);
             if (g.dpadLeftWasPressed())
@@ -163,11 +192,8 @@ public class Shooter {
         } else {
             g.setLedColor(0, 255, 0, 1000);
 
-            if (g.dpadLeftWasPressed())
-                approxVelCof -= 0.01;
-            else if (g.dpadRightWasPressed())
-                approxVelCof += 0.01;
         }
+
         Telemetry();
         return detect.GetBearing(id);
     }
@@ -189,41 +215,72 @@ public class Shooter {
         rightS.setPosition(pos);
         if (time > timer.milliseconds()) {
             PID(rightM, leftM, current_velocity);
+            return false;
         } else {
             rightM.setPower(0);
             leftM.setPower(0);
+            integralSum = 0;
             return true;
         }
-        return false;
     }
 
-    double current_time = 0, current_error = 0, previous_time = 0, previous_error = 0, output, previous_output, i = 0, p, d;
-
+    // ИСПРАВЛЕННЫЙ PID-РЕГУЛЯТОР
     private void PID(DcMotorEx motorR, DcMotorEx motorL, double targetVelocity) {
+        // 1. Получаем текущие данные
         current_time = pidTimer.milliseconds();
-        current_error = targetVelocity - (motorL.getVelocity() + motorR.getVelocity()) / 2;
-        p = pid.p * current_error;
-        i += pid.i * (current_error * (current_time - previous_time));
-        d = pid.d * (current_error - previous_error) / (current_time - previous_time);
-        if (i > max_i) i = max_i;
-        else if (i < -max_i) i = -max_i;
-        output = p + i + d;
+        double currentVelocity = (motorL.getVelocity() + motorR.getVelocity()) / 2.0;
+        current_error = targetVelocity - currentVelocity;
+
+        // 2. Вычисляем изменение времени (защита от деления на 0)
+        double deltaTime = (current_time - lastTime);
+        if (deltaTime == 0) deltaTime = 1;
+
+        // 3. Рассчитываем P, I, D компоненты
+        // P-компонента: пропорциональна текущей ошибке
+        double pComponent = pid.p * current_error;
+
+        // I-компонента: накапливаем ошибку со временем (интеграл)
+        integralSum += (current_error * deltaTime);
+        // Антивиндкап: ограничиваем интеграл
+        if (integralSum > 0.5) integralSum = 0.5;
+        else if (integralSum < -0.5) integralSum = -0.5;
+        double iComponent = pid.i * integralSum;
+
+        // D-компонента: скорость изменения ошибки (производная)
+        double derivative = (current_error - lastError) / deltaTime;
+        double dComponent = pid.d * derivative;
+
+        // 4. КРИТИЧЕСКИ ВАЖНО: Добавляем Feed-Forward (F)
+        // Это базовая мощность для быстрого достижения целевой скорости
+        double feedForwardPower = 0;
+        if (targetVelocity != 0 && feedForward > 0) {
+            feedForwardPower = feedForward;
+        }
+
+        // 5. Суммируем все компоненты (F + PID)
+        output = feedForwardPower + pComponent + iComponent + dComponent;
+
+        // 6. Ограничиваем выходную мощность для защиты моторов
+        if (output > MAX_POWER) output = MAX_POWER;
+        if (output < 0) output = 0; // Для шутера обычно не нужна отрицательная мощность
+
+        // 7. Применяем мощность к моторам
         if (targetVelocity != 0) {
             motorR.setPower(output);
             motorL.setPower(output);
         } else {
             motorR.setPower(0);
             motorL.setPower(0);
+            integralSum = 0; // Сбрасываем интеграл при остановке
         }
 
-        previous_error = current_error;
-        previous_time = current_time;
+        // 8. Сохраняем значения для следующего цикла
+        lastError = current_error;
+        lastTime = current_time;
     }
 
     private double DistToVelocity(double dist) {
-        //if(dist < 2000)
         return -0.00000832850904453064 * dist * dist + 0.16237677658523352875 * dist + 1729.16030889091780409217;
-
     }
 
     private double DistToWallPose(double dist) {

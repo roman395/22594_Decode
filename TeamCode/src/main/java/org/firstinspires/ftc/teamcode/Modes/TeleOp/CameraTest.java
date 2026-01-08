@@ -1,6 +1,5 @@
-package org.firstinspires.ftc.teamcode.Modes;
+package org.firstinspires.ftc.teamcode.Modes.TeleOp;
 
-import com.acmerobotics.dashboard.FtcDashboard;
 import com.bylazar.camerastream.PanelsCameraStream;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;

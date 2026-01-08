@@ -20,18 +20,20 @@ public class Intake {
     public Intake(LinearOpMode lom) {
         motor = lom.hardwareMap.get(DcMotor.class, RobotConstants.IntakeMotor);
         motor.setDirection(DcMotorSimple.Direction.REVERSE);
+        motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         g = lom.gamepad1;
         gTest = PanelsGamepad.INSTANCE.getFirstManager().asCombinedFTCGamepad(g);
     }
 
-    public void TeleOp(double power) {
-        if (g.right_bumper)
-            motor.setPower(power);
-        else if (g.left_bumper)
-            motor.setPower(-power);
-        else
-            motor.setPower(0);
-
+    public void TeleOp(double power, double deltaError) {
+        if(Math.abs(deltaError) <= 80) {
+            if (g.right_bumper)
+                motor.setPower(power);
+            else if (g.left_bumper)
+                motor.setPower(-power);
+            else
+                motor.setPower(0);
+        }
     }
 
     public void ShooterTest(double power) {

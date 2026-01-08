@@ -143,6 +143,16 @@ public class AprilTagsDetection {
     public VisionPortal getPortal() {
         return visionPortal;
     }
-    public double GetBearing(){return lastDetection.ftcPose.bearing;}
-    public double GetElevation(){return lastDetection.ftcPose.elevation;}
+
+    public double GetBearing(int id) {
+        currentDetections = aprilTag.getDetections();
+        for (AprilTagDetection detection : currentDetections)
+            if (detection.metadata != null && detection.id==id)
+                return detection.ftcPose.bearing;
+        return -999;
+    }
+
+    public double GetElevation() {
+        return lastDetection.ftcPose.elevation;
+    }
 }

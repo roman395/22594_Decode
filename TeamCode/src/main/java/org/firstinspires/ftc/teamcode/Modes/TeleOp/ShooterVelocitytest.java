@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Modes;
+package org.firstinspires.ftc.teamcode.Modes.TeleOp;
 
 import com.bylazar.camerastream.PanelsCameraStream;
 import com.bylazar.configurables.annotations.Configurable;
@@ -6,12 +6,10 @@ import com.bylazar.telemetry.PanelsTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import org.firstinspires.ftc.robotcore.external.hardware.camera.Camera;
-import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl;
 import org.firstinspires.ftc.teamcode.Modules.Intake;
+import org.firstinspires.ftc.teamcode.Modules.Mecanum;
 import org.firstinspires.ftc.teamcode.Modules.Shooter;
-import org.firstinspires.ftc.teamcode.RobotConstants;
 
 import java.util.concurrent.TimeUnit;
 
@@ -19,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 @TeleOp
 public class ShooterVelocitytest extends LinearOpMode {
     public static double velocity = 0;
-    public static double pos = 0, power = 0.6;
+    public static double pos = 0, power = 1;
     public static int id = 24;
     public static boolean isCameraUse = false;
     public static long expose = 4;
@@ -29,20 +27,22 @@ public class ShooterVelocitytest extends LinearOpMode {
     public void runOpMode() throws InterruptedException {
         telemetry = PanelsTelemetry.INSTANCE.getFtcTelemetry();
         Shooter sh = new Shooter(this, telemetry);
+        Mecanum mecanum = new Mecanum(this);
         Intake intake = new Intake(this);
         sh.getVisionPortal().resumeStreaming();
         sh.getVisionPortal().resumeLiveView();
         PanelsCameraStream.INSTANCE.startStream(sh.getVisionPortal(), 30);
         control = sh.getVisionPortal().getCameraControl(ExposureControl.class);
-
         control.setMode(ExposureControl.Mode.Manual);
         waitForStart();
 
 
         while (opModeIsActive()) {
             control.setExposure(expose, TimeUnit.MILLISECONDS);
-            sh.VelocityTests(velocity, pos, id, isCameraUse);
-            intake.ShooterTest(power);
+            mecanum.TeleOp(0, telemetry);
+            double deltaError = sh.VelocityTests(velocity, pos, id, isCameraUse);
+            PanelsTelemetry.INSTANCE.getFtcTelemetry().addData("delta", deltaError);
+            intake.TeleOp(power, deltaError);
             telemetry.update();
         }
     }

@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Modes;
+package org.firstinspires.ftc.teamcode.Modes.TeleOp;
 
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -24,8 +24,7 @@ public class TeleopBLUE extends LinearOpMode {
 
         waitForStart();
         while (opModeIsActive()) {
-            mecanum.TeleOp();
-            shooter.TeleOp(intake, 20);
+            mecanum.TeleOp(shooter.TeleOp(intake, 20),tel);
             telemetry.update();
         }
         shooter.getVisionPortal().stopStreaming();

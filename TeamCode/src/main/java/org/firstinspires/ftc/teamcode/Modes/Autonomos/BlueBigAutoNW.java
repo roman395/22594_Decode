@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Modes;
+package org.firstinspires.ftc.teamcode.Modes.Autonomos;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
@@ -12,15 +12,15 @@ import org.firstinspires.ftc.teamcode.Modules.Shooter;
 
 @Configurable
 @Autonomous
-public class RedBigAuto extends LinearOpMode {
+public class BlueBigAutoNW extends LinearOpMode {
     Mecanum drive;
     Shooter shooter;
     Intake intake;
-    public static double drivePower = -1;
+    public static double drivePower = 1;
     public static double strafePower = -1;
-    public static double driveTime = 0.5;
+    public static double driveTime = 1.5;
     public static double strafeTime = 0;
-    public static double shooterTime = 10;
+    public static double shooterTime = 15;
     public static double intakePower = 1;
     public static double intakeWaitTime = 3;
     public static double intakeWorkTime = 0.15;
@@ -52,16 +52,17 @@ public class RedBigAuto extends LinearOpMode {
             tel.addData("time", drive.GetTimer().milliseconds());
             if (!isShooterComplete) {
                 intake.Autonom(intakePower, intakeWorkTime, intakeWaitTime, intakeCycles);
-                isShooterComplete = shooter.Autonom(shooterTime, 24 );
+                isShooterComplete = shooter.Autonom(shooterTime, 20 );
                 if (isShooterComplete)
                     drive.ResetTimer();
             }
             if (isShooterComplete)
-                drive.ForwardMove(driveTime,drivePower);
+                drive.StrafeMove(driveTime, 1 * drivePower, -1 * drivePower, -1 * drivePower, 1 * drivePower);
             tel.addData("is shoot complite", isShooterComplete);
             tel.update();
         }
         shooter.getVisionPortal().stopStreaming();
         shooter.getVisionPortal().stopLiveView();
+
     }
 }

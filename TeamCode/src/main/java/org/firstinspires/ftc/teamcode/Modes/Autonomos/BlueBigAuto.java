@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Modes;
+package org.firstinspires.ftc.teamcode.Modes.Autonomos;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
@@ -12,19 +12,19 @@ import org.firstinspires.ftc.teamcode.Modules.Shooter;
 
 @Configurable
 @Autonomous
-public class BlueBigAutoNW extends LinearOpMode {
+public class BlueBigAuto extends LinearOpMode {
     Mecanum drive;
     Shooter shooter;
     Intake intake;
-    public static double drivePower = 1;
+    public static double drivePower = -1;
     public static double strafePower = -1;
-    public static double driveTime = 1.5;
+    public static double driveTime = 0.5;
     public static double strafeTime = 0;
-    public static double shooterTime = 15;
+    public static double shooterTime = 10;
     public static double intakePower = 1;
     public static double intakeWaitTime = 3;
     public static double intakeWorkTime = 0.15;
-    public static int intakeCycles = 6;
+    public static int intakeCycles = 5;
 
     boolean isTrainComplete, firstTrainComplete = false;
     boolean isShooterComplete, firstShooterCompletes = false;
@@ -57,7 +57,7 @@ public class BlueBigAutoNW extends LinearOpMode {
                     drive.ResetTimer();
             }
             if (isShooterComplete)
-                drive.StrafeMove(driveTime, 1 * drivePower, -1 * drivePower, -1 * drivePower, 1 * drivePower);
+                drive.ForwardMove(driveTime,drivePower);
             tel.addData("is shoot complite", isShooterComplete);
             tel.update();
         }

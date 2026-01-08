@@ -7,12 +7,13 @@ import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.teamcode.Modules.Intake;
 import org.firstinspires.ftc.teamcode.Modules.Shooter;
 
-
+@Autonomous
 public class AutonomBlueSmall extends LinearOpMode {
     private TelemetryManager panelsTelemetry; // Panels Telemetry instance
     public Follower follower; // Pedro Pathing follower instance

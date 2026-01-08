@@ -22,13 +22,16 @@ public class Constants {
             .useSecondaryDrivePIDF(false)
             .useSecondaryHeadingPIDF(false)
             .useSecondaryTranslationalPIDF(false)
-            .translationalPIDFCoefficients(new PIDFCoefficients(0.15,0,0.01,0.04))
+            .translationalPIDFCoefficients(new PIDFCoefficients(0.08,0,0.008,0.04))
             //.secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(0,0,0,0))
-            .headingPIDFCoefficients(new PIDFCoefficients(0.5,0.001,0.005,0.03))
-            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(2,0,0.08,0.01))
+            .headingPIDFCoefficients(new PIDFCoefficients(1,0,0.1,0.03))
+            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.004,0,0.0004,0,0.2))
+            //.secondaryHeadingPIDFCoefficients(new PIDFCoefficients(2,0,0.08,0.01))
             //.drivePIDFCoefficients(new FilteredPIDFCoefficients(0,0,0,0,0))
             //.secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(0,0,0,0,0))
+
             .mass(10);
+
     public static TwoWheelConstants TWC = new TwoWheelConstants()
             .forwardEncoder_HardwareMapName(RobotConstants.ForwardEncoder)
             .strafeEncoder_HardwareMapName(RobotConstants.StrafeEncoder)
@@ -53,7 +56,7 @@ public class Constants {
             .leftFrontMotorName(RobotConstants.MecanumFL)
             .leftRearMotorName(RobotConstants.MecanumRL)
             .rightRearMotorName(RobotConstants.MecanumRR)
-            .rightFrontMotorDirection(DcMotorSimple.Direction.REVERSE)
+            .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
             .leftRearMotorDirection(DcMotorSimple.Direction.FORWARD)
             .leftFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
             .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD);

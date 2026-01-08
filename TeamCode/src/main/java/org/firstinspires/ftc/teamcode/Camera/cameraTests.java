@@ -16,10 +16,12 @@ public class cameraTests extends LinearOpMode {
         detect = new AprilTagsDetection(this, PanelsTelemetry.INSTANCE.getFtcTelemetry());
         drive = new Mecanum(this);
         PanelsCameraStream.INSTANCE.startStream(detect.getPortal(), 30);
+
         waitForStart();
         while (opModeIsActive()){
             detect.dashAprilTag();
-            drive.TeleOp();
+            detect.Update();
+            drive.TeleOp(detect.GetBearing(24), PanelsTelemetry.INSTANCE.getFtcTelemetry());
         }
     }
 }
