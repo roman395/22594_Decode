@@ -10,6 +10,7 @@ import com.qualcomm.robotcore.hardware.DcMotorImplEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.PIDCoefficients;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -25,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 @Configurable
 public class Shooter {
     public static double approxVelCof = 0.2303, approxWallCof = 0.00058, approxVelOf = 1535.3528, approxWallOf = 0.08927;
-    DcMotorImplEx leftM, rightM, forwardEncoder, strafeEncoder;
+    DcMotorEx leftM, rightM, forwardEncoder, strafeEncoder;
     public static double velocity = 2000;
     public static double pos = 0;
     public AprilTagsDetection detect;
@@ -33,7 +34,7 @@ public class Shooter {
     Servo rightS, leftS;
     Gamepad g;
     Telemetry t;
-    public static PIDCoefficients pid = new PIDCoefficients(0.013, 0, 0.005);
+    public static PIDFCoefficients pid = new PIDFCoefficients(0.013, 0, 0.001, 0);
     ElapsedTime timer = new ElapsedTime();
     private double current_velocity = 1800;
     private boolean isShooting = false, isFirstIntake = false, isRumble;
@@ -46,15 +47,14 @@ public class Shooter {
         g = lom.gamepad1;
         t = tel;
 
-        leftM = lom.hardwareMap.get(DcMotorImplEx.class, RobotConstants.ShootLeft);
-        rightM = lom.hardwareMap.get(DcMotorImplEx.class, RobotConstants.ShootRight);
+        leftM = lom.hardwareMap.get(DcMotorEx.class, RobotConstants.ShootLeft);
+        rightM = lom.hardwareMap.get(DcMotorEx.class, RobotConstants.ShootRight);
         rightS = lom.hardwareMap.get(Servo.class, RobotConstants.ShootServoR);
         leftS = lom.hardwareMap.get(Servo.class, RobotConstants.ShootServoL);
         leftM.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         rightM.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         leftM.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         rightM.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-
         rightM.setDirection(DcMotorSimple.Direction.REVERSE);
         forwardEncoder = lom.hardwareMap.get(DcMotorImplEx.class, RobotConstants.ForwardEncoder);
         strafeEncoder = lom.hardwareMap.get(DcMotorImplEx.class, RobotConstants.StrafeEncoder);
@@ -83,7 +83,7 @@ public class Shooter {
         t.addData("wall", pos);
     }
 
-    public void VelocityTests(double velocity, double pos, int id, boolean isCameraUse) {
+    public double VelocityTests(double velocity, double pos, int id, boolean isCameraUse) {
         detect.Update();
         t.addData("distance", detect.GetDistance(id));
         if (isCameraUse) {
@@ -101,34 +101,18 @@ public class Shooter {
         t.addData("changed velocity", output);
         t.addData("power", leftM.getPower());
         t.addData("wall", pos);
+        return current_error;
     }
 
-    public void TeleOp(Intake intake, int id) {
+    public double TeleOp(Intake intake, int id) {
         //Testing(velocity, pos);
         if (g.startWasPressed())
             useCamera = !useCamera;
-
         detect.Update();
         if (detect.GetDistance(id) != -1 && useCamera) {
-            if (!usePhysic) {
+            if (!isShooting || g.left_stick_x != 0 || g.left_stick_y != 0 || (g.right_trigger - g.left_trigger) != 0) {
                 current_velocity = DistToVelocity(detect.GetDistance(id));
                 pos = DistToWallPose(detect.GetDistance(id));
-            } else {
-                pos = LaunchAngleToServo(DistToLaunchAngle(detect.GetElevation()));
-                current_velocity = VelocityToTPS(DistToVelocityPhysic(detect.GetDistance(id) / 1000, DistToLaunchAngle(detect.GetElevation())));
-                t.addData("Velocity Physic", current_velocity);
-                t.addData("pos Physic", pos);
-                t.addData("angle degree",Math.toDegrees(DistToLaunchAngle(detect.GetElevation())));
-                t.addData("elevation", detect.GetElevation());
-            }
-            if (isShooting) {
-                if (isRumble)
-                    t.addLine("RumblingTime!");
-                if (Math.abs(detect.GetBearing()) < 10 && Math.abs(detect.GetBearing()) > 7 && !isRumble) {
-                    g.rumble(500);
-                    isRumble = true;
-                } else if (isRumble && !(Math.abs(detect.GetBearing()) < 10 && Math.abs(detect.GetBearing()) > 7))
-                    isRumble = false;
             }
         } else if (!useCamera && !usePhysic)
             current_velocity = velocity;
@@ -150,8 +134,8 @@ public class Shooter {
         }
         if (g.right_bumper && !isShooting)
             intake.ShooterEnable(1);
-        else if (isShooting && g.right_bumper)
-            intake.ShooterEnable(0.6);
+        else if (isShooting && g.right_bumper && Math.abs(current_error) < 110)
+            intake.ShooterEnable(1);
         else if (g.left_bumper)
             intake.ShooterEnable(-0.6);
         else
@@ -185,6 +169,7 @@ public class Shooter {
                 approxVelCof += 0.01;
         }
         Telemetry();
+        return detect.GetBearing(id);
     }
 
     public void ResetTimer() {
@@ -216,7 +201,7 @@ public class Shooter {
 
     private void PID(DcMotorEx motorR, DcMotorEx motorL, double targetVelocity) {
         current_time = pidTimer.milliseconds();
-        current_error = targetVelocity - motorL.getVelocity();
+        current_error = targetVelocity - (motorL.getVelocity() + motorR.getVelocity()) / 2;
         p = pid.p * current_error;
         i += pid.i * (current_error * (current_time - previous_time));
         d = pid.d * (current_error - previous_error) / (current_time - previous_time);
@@ -237,12 +222,12 @@ public class Shooter {
 
     private double DistToVelocity(double dist) {
         //if(dist < 2000)
-        return dist * approxVelCof + approxVelOf;
+        return -0.00000832850904453064 * dist * dist + 0.16237677658523352875 * dist + 1729.16030889091780409217;
 
     }
 
     private double DistToWallPose(double dist) {
-        return Math.min(dist * approxWallCof - approxWallOf, 0.95);
+        return Math.min(0.00035929030903905293 * dist -0.24707690788092798173, 0.95);
     }
 
     public VisionPortal getVisionPortal() {
