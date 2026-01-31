@@ -12,10 +12,11 @@ public class RobotConstants {
             Camera = "camera",
 
             IntakeMotor = "intake",
-            TurretServo1 = "Turret Servo 1",
-            TurretServo2 = "Turret Servo 2",
-            ShootServoR = "shootSL",
-            ShootServoL = "shootSR",
+            TurretServo1 = "tServo1",
+            TurretServo2 = "tServo2",
+            TurretServoEncoder1 = "tServoEn1",
+            TurretServoEncoder2 = "tServoEn2",
+            ShootServo = "shootS",
             ShootLeft = "shootL",
             ShootRight = "shootR";
 }

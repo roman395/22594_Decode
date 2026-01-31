@@ -27,7 +27,7 @@ public class ShooterVelocitytest extends LinearOpMode {
     public void runOpMode() throws InterruptedException {
         telemetry = PanelsTelemetry.INSTANCE.getFtcTelemetry();
         Shooter sh = new Shooter(this, telemetry);
-        Mecanum mecanum = new Mecanum(this);
+        //Mecanum mecanum = new Mecanum(this);
         Intake intake = new Intake(this);
         sh.getVisionPortal().resumeStreaming();
         sh.getVisionPortal().resumeLiveView();
@@ -39,10 +39,9 @@ public class ShooterVelocitytest extends LinearOpMode {
 
         while (opModeIsActive()) {
             control.setExposure(expose, TimeUnit.MILLISECONDS);
-            mecanum.TeleOp(0, telemetry);
-            double deltaError = sh.VelocityTests(velocity, pos, id, isCameraUse);
-            PanelsTelemetry.INSTANCE.getFtcTelemetry().addData("delta", deltaError);
-            intake.TeleOp(power, deltaError);
+            //mecanum.TeleOp(sh.aprilTagDetector.GetBearing(id), telemetry);
+            PanelsTelemetry.INSTANCE.getFtcTelemetry().addData("distance", sh.velocityTests(velocity, pos, id, isCameraUse));
+            intake.setPower(power);
             telemetry.update();
         }
     }
