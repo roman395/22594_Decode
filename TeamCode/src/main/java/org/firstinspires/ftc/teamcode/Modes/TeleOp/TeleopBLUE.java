@@ -1,12 +1,10 @@
 package org.firstinspires.ftc.teamcode.Modes.TeleOp;
 
-import com.bylazar.camerastream.PanelsCameraStream;
-import com.bylazar.telemetry.PanelsTelemetry;
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.Modules.Intake;
 import org.firstinspires.ftc.teamcode.Modules.Mecanum;
 import org.firstinspires.ftc.teamcode.Modules.Shooter;
@@ -24,8 +22,6 @@ abstract class TeleOpBase extends LinearOpMode {
     Intake intake;
     Shooter shooter;
     Turret turret;
-    Telemetry tel = PanelsTelemetry.INSTANCE.getFtcTelemetry();
-
     /**
      * This abstract method must be implemented by subclasses to provide the
      * specific AprilTag ID for their alliance.
@@ -33,7 +29,7 @@ abstract class TeleOpBase extends LinearOpMode {
      * @return The AprilTag ID to target.
      */
     protected abstract int getAprilTagId();
-
+    protected abstract Pose getGoalPose();
     /**
      * This abstract method provides the name of the alliance for telemetry.
      *
@@ -46,33 +42,22 @@ abstract class TeleOpBase extends LinearOpMode {
         // --- Initialization ---
         mecanum = new Mecanum(this);
         intake = new Intake(this);
-        shooter = new Shooter(this, tel);
+        shooter = new Shooter(this, getAprilTagId());
         turret = new Turret(this);
-        tel.addLine("Alliance: " + getAllianceName());
-        tel.addLine("Targeting AprilTag ID: " + getAprilTagId());
-        tel.addLine("Ready to start!");
-        tel.update();
-        shooter.useOldApprox(false);
+        telemetry.addLine("Alliance: " + getAllianceName());
+        telemetry.addLine("Targeting AprilTag ID: " + getAprilTagId());
+        telemetry.addLine("Ready to start!");
+        telemetry.update();
         waitForStart();
 
         if (isStopRequested()) return;
 
         // --- Main Loop ---
         while (opModeIsActive()) {
-            // The shooter's control method returns the bearing to the AprilTag target.
-            double bearingToTarget = shooter.teleOpControl(intake, turret, getAprilTagId());
-
-            // The mecanum's control method uses this bearing as the input for its heading PID controller,
-            // which will try to turn the robot to make the bearing zero.
-            mecanum.TeleOp(bearingToTarget, tel);
-
-            // Telemetry is updated within the modules, but an extra update here is fine.
-            tel.update();
-        }
-
-        // --- Cleanup ---
-        if (shooter.getVisionPortal() != null) {
-            shooter.getVisionPortal().stopStreaming();
+            shooter.teleOpController();
+            turret.AutoAimingOnError(shooter.getBearing());
+            mecanum.teleOp();
+            telemetry.update();
         }
     }
 }
@@ -92,6 +77,9 @@ public class TeleopBLUE extends TeleOpBase {
     protected String getAllianceName() {
         return "BLUE";
     }
+
+    @Override
+    protected Pose getGoalPose(){return new Pose(17, 132);}
 }
 
 // =================================================================================================
@@ -101,3 +89,7 @@ public class TeleopBLUE extends TeleOpBase {
 // The FTC SDK will still find and list it as an OpMode because of the @TeleOp annotation.
 // =================================================================================================
 
+// pos vel dist
+// 0.6 1250 1470.6637
+// 0 1050 718.0975
+// 1 1350 1993.5275

@@ -12,6 +12,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.teamcode.Modules.Intake;
 import org.firstinspires.ftc.teamcode.Modules.Shooter;
+import org.firstinspires.ftc.teamcode.Modules.Turret;
 
 /**
  * Autonomous OpMode for the Big Red configuration, using Pedro Pathing.
@@ -22,30 +23,37 @@ import org.firstinspires.ftc.teamcode.Modules.Shooter;
 public class AutonomRedBig extends LinearOpMode {
     private TelemetryManager panelsTelemetry;
     public Follower follower;
+    private Paths paths;
+    private Shooter shooter;
+    private Intake intake;
+    private Turret turret;
+    public static double anglePose1 = 0;
+    public static double anglePose2 = 0;
+    public static double anglePose3 = 0;
 
     // The AprilTag ID for the red alliance backdrop
-    private static final int APRILTAG_TARGET_ID = 24;
+    private static final int APRILTAG_TARGET_ID = 20;
 
     @Override
     public void runOpMode() {
         // --- Initialization ---
         panelsTelemetry = PanelsTelemetry.INSTANCE.getTelemetry();
-        Shooter shooter = new Shooter(this, PanelsTelemetry.INSTANCE.getFtcTelemetry());
-        Intake intake = new Intake(this);
+        shooter = new Shooter(this, APRILTAG_TARGET_ID);
+        intake = new Intake(this);
+        turret = new Turret(this);
         follower = Constants.createFollower(hardwareMap);
-        Paths paths = new Paths(follower);
+        paths = new Paths(follower);
 
         // Set the starting pose for the robot
         follower.setStartingPose(new Pose(129, 110, Math.toRadians(-90)));
 
         panelsTelemetry.debug("Status", "Initialized and Ready");
         panelsTelemetry.update(telemetry);
-
         waitForStart();
+
         if (isStopRequested()) return;
 
         // --- Autonomous Sequence ---
-
         // 1. Предзагрузка
         panelsTelemetry.debug("State", "Driving to Preload Shot Position");
         follower.followPath(paths.ShootPreload);
@@ -54,76 +62,66 @@ public class AutonomRedBig extends LinearOpMode {
         // 2. Выстрел предзагрузки
         panelsTelemetry.debug("State", "Shooting Preload");
         shooter.resetAutonomousShootingSequence();
-        shooter.SetCoefficientsAuto(2000,0);
-        while (opModeIsActive() && !shooter.runAutonomousShootingSequence(intake, APRILTAG_TARGET_ID)) {
+        while (opModeIsActive() && !shooter.runAutonomousShootingSequence()) {
+            turret.autonomousController(shooter.getBearing(), anglePose1);
             follower.update();
             updateTelemetry();
         }
 
         // 3. Первый захват
         panelsTelemetry.debug("State", "Driving to Spike 1 & Intaking");
-        intake.ShooterEnable(1); // ВКЛЮЧАЕМ перед движением
-        shooter.reverse(-0.8); // Реверс шутера
+        intake.grabbingAutonomous(); // ВКЛЮЧАЕМ перед движением
+
         follower.followPath(paths.TakeSpike1);
         waitUntilPathDone();
-
-
         // 4. Первый выстрел
         panelsTelemetry.debug("State", "Driving to Cycle 1 Shot Position");
         follower.followPath(paths.Shoot1);
+        intake.stopAll(); // ВЫКЛЮЧАЕМ после движения
         waitUntilPathDone();
-        intake.stop(); // ВЫКЛЮЧАЕМ после движения
-        shooter.stopMotors();
+
         panelsTelemetry.debug("State", "Shooting Cycle 1");
         shooter.resetAutonomousShootingSequence();
-        shooter.SetCoefficientsAuto(2000,0.1);
-        while (opModeIsActive() && !shooter.runAutonomousShootingSequence(intake, APRILTAG_TARGET_ID)) {
+        while (opModeIsActive() && !shooter.runAutonomousShootingSequence()) {
+            turret.autonomousController(shooter.getBearing(), anglePose1);
             follower.update();
             updateTelemetry();
         }
 
         // 5. Второй захват
         panelsTelemetry.debug("State", "Driving to Spike 2 & Intaking");
-        intake.ShooterEnable(1); // ВКЛЮЧАЕМ перед движением
-        shooter.reverse(-0.8);
+        intake.grabbingAutonomous(); // ВКЛЮЧАЕМ перед движением
         follower.followPath(paths.TakeSpike2);
         waitUntilPathDone();
-
+        intake.stopAll(); // ВЫКЛЮЧАЕМ после движения
 
         // 6. Второй выстрел
         panelsTelemetry.debug("State", "Driving to Cycle 2 Shot Position");
         follower.followPath(paths.Shoot2);
         waitUntilPathDone();
-        intake.stop(); // ВЫКЛЮЧАЕМ после движения
-        shooter.stopMotors();
 
         panelsTelemetry.debug("State", "Shooting Cycle 2");
         shooter.resetAutonomousShootingSequence();
-        shooter.SetCoefficientsAuto(2000,0.2);
-        while (opModeIsActive() && !shooter.runAutonomousShootingSequence(intake, APRILTAG_TARGET_ID)) {
+        while (opModeIsActive() && !shooter.runAutonomousShootingSequence()) {
+            turret.autonomousController(shooter.getBearing(), anglePose1);
             follower.update();
             updateTelemetry();
         }
 
         // 7. Третий захват
         panelsTelemetry.debug("State", "Driving to Spike 3 & Intaking");
-        intake.ShooterEnable(1); // ВКЛЮЧАЕМ перед движением
-        shooter.reverse(-0.8);
+        intake.grabbingAutonomous(); // ВКЛЮЧАЕМ перед движением
         follower.followPath(paths.TakeSpike3);
         waitUntilPathDone();
-
-
-        // 8. Третий выстрел
+        intake.stopGrabbing(); // ВЫКЛЮЧАЕМ после движения
         panelsTelemetry.debug("State", "Driving to Cycle 3 Shot Position");
         follower.followPath(paths.Shoot3);
         waitUntilPathDone();
-        intake.stop(); // ВЫКЛЮЧАЕМ после движения
-        shooter.stopMotors();
 
         panelsTelemetry.debug("State", "Shooting Cycle 3");
         shooter.resetAutonomousShootingSequence();
-        shooter.SetCoefficientsAuto(0,0);
-        while (opModeIsActive() && !shooter.runAutonomousShootingSequence(intake, APRILTAG_TARGET_ID)) {
+        while (opModeIsActive() && !shooter.runAutonomousShootingSequence()) {
+            turret.autonomousController(shooter.getBearing(), anglePose1);
             follower.update();
             updateTelemetry();
         }
@@ -160,6 +158,7 @@ public class AutonomRedBig extends LinearOpMode {
 
     // Inner class for defining paths remains the same
 
+
     public static class Paths {
         public PathChain ShootPreload;
         public PathChain TakeSpike1;
@@ -175,69 +174,69 @@ public class AutonomRedBig extends LinearOpMode {
                             new BezierLine(
                                     new Pose(129.000, 110.000),
 
-                                    new Pose(102.000, 117.000)
+                                    new Pose(107.000, 120.000)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(-90), Math.toRadians(-140))
+                    ).setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(20))
 
                     .build();
 
             TakeSpike1 = follower.pathBuilder().addPath(
                             new BezierCurve(
                                     new Pose(107.000, 120.000),
-                                    new Pose(76.966, 95.804),
-                                    new Pose(138.000, 77.000)
+                                    new Pose(71.966, 95.804),
+                                    new Pose(125.000, 77.000)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(-140), Math.toRadians(0))
+                    ).setLinearHeadingInterpolation(Math.toRadians(20), Math.toRadians(0))
 
                     .build();
 
             Shoot1 = follower.pathBuilder().addPath(
                             new BezierLine(
-                                    new Pose(125.000, 84.000),
+                                    new Pose(125.000, 77.000),
 
                                     new Pose(106.000, 98.000)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(-130))
+                    ).setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(50))
 
                     .build();
 
             TakeSpike2 = follower.pathBuilder().addPath(
                             new BezierCurve(
                                     new Pose(106.000, 98.000),
-                                    new Pose(86.080, 61.794),
-                                    new Pose(128.000, 52.500)
+                                    new Pose(81.080, 61.794),
+                                    new Pose(125.000, 52.000)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(-130), Math.toRadians(0))
+                    ).setLinearHeadingInterpolation(Math.toRadians(50), Math.toRadians(0))
 
                     .build();
 
             Shoot2 = follower.pathBuilder().addPath(
                             new BezierLine(
-                                    new Pose(125.000, 59.500),
+                                    new Pose(125.000, 52.000),
 
                                     new Pose(97.000, 90.000)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(-130))
+                    ).setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(47))
 
                     .build();
 
             TakeSpike3 = follower.pathBuilder().addPath(
                             new BezierCurve(
                                     new Pose(97.000, 90.000),
-                                    new Pose(80.913, 40.656),
-                                    new Pose(133.000, 20.500)
+                                    new Pose(75.913, 43.656),
+                                    new Pose(125.000, 28.000)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(-130), Math.toRadians(0))
+                    ).setLinearHeadingInterpolation(Math.toRadians(47), Math.toRadians(0))
 
                     .build();
 
             Shoot3 = follower.pathBuilder().addPath(
                             new BezierLine(
-                                    new Pose(125.000, 35.500),
+                                    new Pose(125.000, 28.000),
 
                                     new Pose(83.801, 85.511)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(230))
+                    ).setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(40))
 
                     .build();
 
@@ -247,10 +246,11 @@ public class AutonomRedBig extends LinearOpMode {
 
                                     new Pose(85.053, 67.448)
                             )
-                    ).setConstantHeadingInterpolation(Math.toRadians(230))
+                    ).setConstantHeadingInterpolation(Math.toRadians(40))
 
                     .build();
         }
     }
+
 
 }

@@ -33,7 +33,7 @@ public class AutonomBlueBig extends LinearOpMode {
     public void runOpMode() {
         // --- Initialization ---
         panelsTelemetry = PanelsTelemetry.INSTANCE.getTelemetry();
-        shooter = new Shooter(this, PanelsTelemetry.INSTANCE.getFtcTelemetry());
+        shooter = new Shooter(this, APRILTAG_TARGET_ID);
         intake = new Intake(this);
         follower = Constants.createFollower(hardwareMap);
         paths = new Paths(follower);
@@ -43,7 +43,6 @@ public class AutonomBlueBig extends LinearOpMode {
 
         panelsTelemetry.debug("Status", "Initialized and Ready");
         panelsTelemetry.update(telemetry);
-        shooter.useOldApprox(true);
         waitForStart();
 
         if (isStopRequested()) return;
@@ -58,74 +57,67 @@ public class AutonomBlueBig extends LinearOpMode {
         // 2. Выстрел предзагрузки
         panelsTelemetry.debug("State", "Shooting Preload");
         shooter.resetAutonomousShootingSequence();
-        while (opModeIsActive() && !shooter.runAutonomousShootingSequence(intake, APRILTAG_TARGET_ID)) {
+        while (opModeIsActive() && !shooter.runAutonomousShootingSequence()) {
             follower.update();
             updateTelemetry();
         }
 
         // 3. Первый захват
         panelsTelemetry.debug("State", "Driving to Spike 1 & Intaking");
-        intake.ShooterEnable(1); // ВКЛЮЧАЕМ перед движением
-        shooter.reverse(-0.8); // Реверс шутера
+        intake.grabbing(); // ВКЛЮЧАЕМ перед движением
+
         follower.followPath(paths.TakeSpike1);
         waitUntilPathDone();
-        intake.ShooterEnable(0.6); // ВКЛЮЧАЕМ перед движением
-        shooter.reverse(-0.7); // Реверс шутера
+        intake.setIntakePower(0.6); // ВКЛЮЧАЕМ перед движением
         // 4. Первый выстрел
         panelsTelemetry.debug("State", "Driving to Cycle 1 Shot Position");
         follower.followPath(paths.Shoot1);
         waitUntilPathDone();
-        intake.stop(); // ВЫКЛЮЧАЕМ после движения
-        shooter.stopMotors();
+        intake.stopGrabbing(); // ВЫКЛЮЧАЕМ после движения
+
         panelsTelemetry.debug("State", "Shooting Cycle 1");
         shooter.resetAutonomousShootingSequence();
-        while (opModeIsActive() && !shooter.runAutonomousShootingSequence(intake, APRILTAG_TARGET_ID)) {
+        while (opModeIsActive() && !shooter.runAutonomousShootingSequence()) {
             follower.update();
             updateTelemetry();
         }
 
         // 5. Второй захват
         panelsTelemetry.debug("State", "Driving to Spike 2 & Intaking");
-        intake.ShooterEnable(1); // ВКЛЮЧАЕМ перед движением
-        shooter.reverse(-0.8);
+        intake.grabbing(); // ВКЛЮЧАЕМ перед движением
         follower.followPath(paths.TakeSpike2);
         waitUntilPathDone();
-        intake.ShooterEnable(0.6); // ВКЛЮЧАЕМ перед движением
-        shooter.reverse(-0.7); // Реверс шутера
+        intake.setIntakePower(0.6); // ВКЛЮЧАЕМ перед движением
 
         // 6. Второй выстрел
         panelsTelemetry.debug("State", "Driving to Cycle 2 Shot Position");
         follower.followPath(paths.Shoot2);
         waitUntilPathDone();
-        intake.stop(); // ВЫКЛЮЧАЕМ после движения
-        shooter.stopMotors();
+        intake.stopGrabbing(); // ВЫКЛЮЧАЕМ после движения
 
         panelsTelemetry.debug("State", "Shooting Cycle 2");
         shooter.resetAutonomousShootingSequence();
-        while (opModeIsActive() && !shooter.runAutonomousShootingSequence(intake, APRILTAG_TARGET_ID)) {
+        while (opModeIsActive() && !shooter.runAutonomousShootingSequence()) {
             follower.update();
             updateTelemetry();
         }
 
         // 7. Третий захват
         panelsTelemetry.debug("State", "Driving to Spike 3 & Intaking");
-        intake.ShooterEnable(1); // ВКЛЮЧАЕМ перед движением
-        shooter.reverse(-0.8);
+        intake.grabbing(); // ВКЛЮЧАЕМ перед движением
         follower.followPath(paths.TakeSpike3);
         waitUntilPathDone();
-        intake.ShooterEnable(0.6); // ВКЛЮЧАЕМ перед движением
-        shooter.reverse(-0.7); // Реверс шутера
+        intake.setIntakePower(0.6); // ВКЛЮЧАЕМ перед движением
 
         // 8. Третий выстрел
         panelsTelemetry.debug("State", "Driving to Cycle 3 Shot Position");
         follower.followPath(paths.Shoot3);
         waitUntilPathDone();
-        intake.stop(); // ВЫКЛЮЧАЕМ после движения
-        shooter.stopMotors();
+        intake.stopGrabbing(); // ВЫКЛЮЧАЕМ после движения
 
         panelsTelemetry.debug("State", "Shooting Cycle 3");
         shooter.resetAutonomousShootingSequence();
-        while (opModeIsActive() && !shooter.runAutonomousShootingSequence(intake, APRILTAG_TARGET_ID)) {
+        while (opModeIsActive() && !shooter.runAutonomousShootingSequence()) {
             follower.update();
             updateTelemetry();
         }

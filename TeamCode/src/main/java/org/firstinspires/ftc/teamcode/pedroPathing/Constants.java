@@ -17,8 +17,8 @@ import org.firstinspires.ftc.teamcode.RobotConstants;
 
 public class Constants {
     public static FollowerConstants followerConstants = new FollowerConstants()
-            .forwardZeroPowerAcceleration(-31.6)
-            .lateralZeroPowerAcceleration(-51.98)
+            .forwardZeroPowerAcceleration(-26.17)
+            .lateralZeroPowerAcceleration(-84.47)
             .useSecondaryDrivePIDF(false)
             .useSecondaryHeadingPIDF(false)
             .useSecondaryTranslationalPIDF(false)
@@ -30,17 +30,17 @@ public class Constants {
             //.drivePIDFCoefficients(new FilteredPIDFCoefficients(0,0,0,0,0))
             //.secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(0,0,0,0,0))
 
-            .mass(10);
+            .mass(13.25);
 
     public static TwoWheelConstants TWC = new TwoWheelConstants()
             .forwardEncoder_HardwareMapName(RobotConstants.ForwardEncoder)
             .strafeEncoder_HardwareMapName(RobotConstants.StrafeEncoder)
             .forwardPodY(1)
             .strafePodX(-6.22)
-            .forwardTicksToInches(0.002)
-            .strafeTicksToInches(-0.0019)
-            .forwardEncoderDirection(Encoder.FORWARD)
-            .strafeEncoderDirection(Encoder.FORWARD)
+            .forwardTicksToInches(0.0017)
+            .strafeTicksToInches(0.0019)
+            .forwardEncoderDirection(Encoder.REVERSE)
+            .strafeEncoderDirection(Encoder.REVERSE)
             .IMU_HardwareMapName("imu")
             .IMU_Orientation(
                     new RevHubOrientationOnRobot(
@@ -50,16 +50,17 @@ public class Constants {
             );
     public static MecanumConstants train = new MecanumConstants()
             .maxPower(1)
-            .xVelocity(72)
-            .yVelocity(53)
+            .xVelocity(57.7)
+            .yVelocity(43.63)
             .rightFrontMotorName(RobotConstants.MecanumFR)
             .leftFrontMotorName(RobotConstants.MecanumFL)
             .leftRearMotorName(RobotConstants.MecanumRL)
             .rightRearMotorName(RobotConstants.MecanumRR)
-            .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
-            .leftRearMotorDirection(DcMotorSimple.Direction.FORWARD)
+            .rightFrontMotorDirection(DcMotorSimple.Direction.REVERSE)
+            .leftRearMotorDirection(DcMotorSimple.Direction.REVERSE)
             .leftFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
-            .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD);
+            .rightRearMotorDirection(DcMotorSimple.Direction.REVERSE)
+            .useBrakeModeInTeleOp(true);
 
     public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
 

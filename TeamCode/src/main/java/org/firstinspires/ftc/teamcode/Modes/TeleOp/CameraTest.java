@@ -18,7 +18,7 @@ public class CameraTest extends LinearOpMode {
         PanelsCameraStream.INSTANCE.startStream(april.getPortal(),120);
 
         while (opModeIsActive()) {
-            april.TeleOp();
+            april.Telemetry();
         }
         PanelsCameraStream.INSTANCE.stopStream();
 

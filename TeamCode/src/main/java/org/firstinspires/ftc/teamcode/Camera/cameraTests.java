@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.Camera;
 
 import com.bylazar.camerastream.PanelsCameraStream;
 import com.bylazar.telemetry.PanelsTelemetry;
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -20,8 +21,8 @@ public class cameraTests extends LinearOpMode {
         waitForStart();
         while (opModeIsActive()){
             detect.dashAprilTag();
-            detect.Update();
-            drive.TeleOp(detect.GetBearing(24), PanelsTelemetry.INSTANCE.getFtcTelemetry());
+            detect.update();
+            drive.teleOp();
         }
     }
 }

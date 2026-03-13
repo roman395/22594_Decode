@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.Modes.TeleOp;
 
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 @TeleOp(name = "TeleOp RED", group = "Main")
@@ -13,4 +14,6 @@ public class TeleopRED extends TeleOpBase {
     protected String getAllianceName() {
         return "RED";
     }
+    @Override
+    protected Pose getGoalPose(){return new Pose(127,132);}
 }

@@ -1,27 +1,40 @@
 package org.firstinspires.ftc.teamcode.Modules;
 
+import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
-import com.qualcomm.robotcore.hardware.PIDCoefficients;
-import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.RobotConstants;
 
+@Configurable
 public class Turret {
     private CRServo s1, s2;
     private AnalogInput s1En, s2En;
     private Gamepad g;
-    public static double maxAngle = 0, minAngle = 0, cameraMultiply = 1, servoRange = 355;//TODO don`t forget about gear ratio
-    public static double centerPose = 0, leftPose = 0, rightPose = 0;
+    public static double maxAngle = 145, maxIntegral = 0.3, minAngle = -123, cameraMultiply = 1, servoRange = 370, offset = 0;
+    private boolean isCloseToBreake = false;
+    public static double breakPose = 3.2;
+    public static double centerPose = 1.796;
+    public static double inputMultiply = 0.5;
+
+    // Константы для детекта переходов
+    private static final double MAX_VOLTAGE = 3.3;
+    private static final double LOW_VOLTAGE_THRESHOLD = 0.2;      // В вольтах
+    private static final double HIGH_VOLTAGE_THRESHOLD = 3.1;    // В вольтах
+
+    // Переводной коэффициент: (вольтаж) -> (угол с учётом редукции)
+    // При полном обороте датчика (3.3В) мы получаем servoRange градусов на выходе
+    private static final double VOLTAGE_TO_ANGLE = servoRange / MAX_VOLTAGE;
+
     private Telemetry t;
     private ElapsedTime pidTimer = new ElapsedTime();
-    public static PIDCoefficients pid = new PIDCoefficients(0, 0, 0);
-    private double lastTime, countOfFullTurn = 0, pidOutput, lastError = 0, lastPos = 0;
+    private double lastTime, countOfFullTurn = 0, integral = 1, pidOutput, lastError = 0;
+    private double lastVoltage = 0;  // Храним предыдущее напряжение для детекта переходов
 
     public Turret(LinearOpMode lom) {
         s1 = lom.hardwareMap.get(CRServo.class, RobotConstants.TurretServo1);
@@ -30,63 +43,173 @@ public class Turret {
         s1En = lom.hardwareMap.get(AnalogInput.class, RobotConstants.TurretServoEncoder1);
         s2En = lom.hardwareMap.get(AnalogInput.class, RobotConstants.TurretServoEncoder2);
 
-        s1.setDirection(DcMotorSimple.Direction.FORWARD);
+        s1.setDirection(DcMotorSimple.Direction.REVERSE);
+        s2.setDirection(DcMotorSimple.Direction.REVERSE);
+        s1.setPower(1);
+        s2.setPower(1);
+        s1.setPower(0);
+        s2.setPower(0);
         g = lom.gamepad1;
         t = lom.telemetry;
-        lastPos = s1En.getVoltage();
+
+        // Инициализация
+        lastVoltage = s1En.getVoltage();
     }
 
     public void TeleOp() {
-        s1.setPower(g.right_stick_x);
-        s2.setPower(g.right_stick_x);
-        t.addData("servo 1 output:", s1En.getVoltage());
-        t.addData("servo 2 output:", s2En.getVoltage());
-        t.addData("servo 2 psewvdo angle output:", s1En.getVoltage() / 3.3 * 355.0);
-        t.addData("servo 2 psevdo angle output:", s2En.getVoltage() / 3.3 * 355.0);
+        double currentPos = GetCurrentPosition();
+
+        if (g.right_stick_x < -0.05 && currentPos > minAngle) {
+            s1.setPower(g.right_stick_x * inputMultiply);
+            s2.setPower(g.right_stick_x * inputMultiply);
+        } else if (g.right_stick_x > 0.05 && currentPos < maxAngle) {
+            s1.setPower(g.right_stick_x * inputMultiply);
+            s2.setPower(g.right_stick_x * inputMultiply);
+        } else {
+            s1.setPower(0);
+            s2.setPower(0);
+        }
+        t.addData("servo 1 voltage:", s1En.getVoltage());
+        t.addData("servo 2 voltage:", s2En.getVoltage());
+        t.addData("turret angle:", currentPos);
+        t.addData("full rotations:", countOfFullTurn);
+        t.addData("center pose", centerPose);
     }
 
-    public void AutoAiming(double bearing) {
+    public void AutoAimingOnTarget(double bearing) {
         double currentServoAngle = GetCurrentPosition();
-        double targetServoAngle = Math.min(Math.max(bearing * cameraMultiply + currentServoAngle, minAngle), maxAngle);
-        double power = PID(currentServoAngle, targetServoAngle);
+        double targetServoAngle = Math.clamp(bearing * cameraMultiply, minAngle, maxAngle);
+        double power = PIDOnTarget(targetServoAngle, currentServoAngle);
         s1.setPower(power);
         s2.setPower(power);
     }
 
-    private double PID(double target, double current) {
-        double current_time = pidTimer.milliseconds();
-        double error = target - current;
+    public void AutoAimingOnError(double error) {
+        // 1. Сначала проверяем, валидная ли ошибка
+        if (error == -999999 || Math.abs(error) > 180) { // Ограничь максимальный поворот за раз
+            // Останавливаем моторы, если нет цели
+            s1.setPower(0);
+            s2.setPower(0);
+            return;
+        }
 
-        // 2. Calculate time change; skip loop if delta is too small to be reliable.
+        double currentServoAngle = GetCurrentPosition();
+
+        // 2. Проверяем, не выйдем ли за пределы после поворота
+        double targetAngle = currentServoAngle + error;
+
+        // Нормализуем targetAngle в диапазон [-180..180] относительно центра
+        // чтобы корректно сравнивать с minAngle и maxAngle
+        // 3. Если целевой угол в пределах допустимого
+        if (targetAngle >= minAngle && targetAngle <= maxAngle) {
+            double power = PIDOnError(error, currentServoAngle);
+            s1.setPower(power);
+            s2.setPower(power);
+        } else {
+            // Если выходим за пределы - не двигаемся
+            s1.setPower(0);
+            s2.setPower(0);
+        }
+    }
+
+    private double PIDOnTarget(double target, double current) {
+        double current_time = pidTimer.milliseconds();
+        double error = target - current + offset;
+
         double deltaTime = (current_time - lastTime);
         if (deltaTime < 1) {
             return 0;
         }
 
-        // 3. Calculate P, I, D components
-        double pComponent = Shooter.Configuration.PID_COEFFICIENTS.p * error;
+        double pComponent = RobotConstants.TurretPid.p * error;
+        integral += error * deltaTime;
+        integral = Math.clamp(integral, -maxIntegral, maxIntegral);
+        double iComponent = integral * RobotConstants.TurretPid.i;
         double derivative = (error - lastError) / deltaTime;
-        double dComponent = Shooter.Configuration.PID_COEFFICIENTS.d * derivative;
+        double dComponent = RobotConstants.TurretPid.d * derivative;
 
-        // 4. Add Feed-Forward (F) component
+        pidOutput = pComponent + dComponent + iComponent;
+        t.addData("error", error);
+        t.addData("current", current);
+        t.addData("target", target);
 
-        // 5. Sum all components to get the final output power.
-        pidOutput = pComponent + dComponent;
-
-        // 8. Save state for the next loop iteration.
         lastError = error;
         lastTime = current_time;
         return pidOutput;
     }
 
-    private double GetCurrentPosition() {
-        double currentPos = s1En.getVoltage();
-        if(Math.abs(currentPos-lastPos) > 2.5)
-            if(Math.abs(lastPos-leftPose)<0.1)
-                countOfFullTurn--;
-            else
-                countOfFullTurn++;
-        lastPos = currentPos;
-        return currentPos / 3.3 * servoRange + countOfFullTurn * servoRange;
+    private double PIDOnError(double error, double current) {
+        error += offset;
+        double current_time = pidTimer.milliseconds();
+        double deltaTime = (current_time - lastTime);
+        if (deltaTime < 1) {
+            return 0;
+        }
+
+        double pComponent = RobotConstants.TurretPid.p * error;
+        integral += error * deltaTime;
+        integral = Math.clamp(integral, -maxIntegral, maxIntegral);
+        double iComponent = integral * RobotConstants.TurretPid.i;
+        double derivative = (error - lastError) / deltaTime;
+        double dComponent = RobotConstants.TurretPid.d * derivative;
+        pidOutput = pComponent + dComponent + iComponent;
+
+        lastError = error;
+        lastTime = current_time;
+        return pidOutput;
+    }
+
+    /**
+     * Получить текущий угол турели с учётом всех оборотов
+     * Возвращает угол в градусах (может быть больше 370 или отрицательным)
+     */
+    public double GetCurrentPosition() {
+        double currentVoltage = s1En.getVoltage();
+        currentVoltage = Math.min(MAX_VOLTAGE, Math.max(0, currentVoltage));
+
+        // Вычисляем изменение
+        double voltageChange = currentVoltage - lastVoltage;
+
+        // Если изменение больше половины диапазона - значит перескочили через границу
+        if (voltageChange > MAX_VOLTAGE / 2) {
+            // Было мало, стало много? Нет, наоборот: если изменение положительное и большое,
+            // значит мы перешли с ~0 на ~3.3 (движение назад)
+            countOfFullTurn--; // Движение назад
+        } else if (voltageChange < -MAX_VOLTAGE / 2) {
+            // Отрицательное большое изменение = перешли с 3.3 на 0 (движение вперед)
+            countOfFullTurn++; // Движение вперед
+        }
+
+        // Проверка на близость к "точке разрыва" для замедления
+        isCloseToBreake = Math.abs(currentVoltage - breakPose) < 0.5;
+
+        lastVoltage = currentVoltage;
+
+        return (currentVoltage - centerPose) * VOLTAGE_TO_ANGLE + countOfFullTurn * servoRange;
+    }
+
+    /**
+     * Сброс нулевой позиции (калибровка)
+     */
+    public void resetStartPose() {
+        centerPose = s1En.getVoltage();
+        countOfFullTurn = 0;
+        lastVoltage = centerPose; // Важно! Обновляем lastVoltage при сбросе
+    }
+
+    public double getS1Pos() {
+        return s1En.getVoltage();
+    }
+
+    public double getRawAngle() {
+        double voltage = s1En.getVoltage();
+        voltage = Math.min(MAX_VOLTAGE, Math.max(0, voltage));
+        return voltage * VOLTAGE_TO_ANGLE;
+    }
+    public void autonomousController(double error, double targetAngle) {
+        if(error==-999999)
+            PIDOnTarget(targetAngle, GetCurrentPosition());
+        else
+            PIDOnError(error, GetCurrentPosition());
     }
 }

@@ -2,13 +2,10 @@ package org.firstinspires.ftc.teamcode.Camera;
 
 import android.util.Size;
 
-import com.acmerobotics.dashboard.FtcDashboard;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -82,7 +79,6 @@ public class AprilTagsDetection {
 
         // Build the Vision Portal, using the above settings.
         visionPortal = builder.build();
-
         // Disable or re-enable the aprilTag processor at any time.
         //visionPortal.setProcessorEnabled(aprilTag, true);
 
@@ -122,20 +118,26 @@ public class AprilTagsDetection {
     private List<AprilTagDetection> currentDetections;
     private AprilTagDetection lastDetection;
 
-    public void Update() {
+    public void update() {
         currentDetections = aprilTag.getDetections();
         for (AprilTagDetection detection : currentDetections)
             if (detection.metadata != null)
                 lastDetection = detection;
     }
 
-    public void TeleOp() {
+    public void Telemetry() {
         dashAprilTag();
     }
 
-    public double GetDistance(int tagID) {
+    /**
+     * Get tagID ang return distance in meters
+     *
+     * @param tagID
+     * @return lastDetection.ftcPose.range
+     */
+    public double getDistance(int tagID) {
         if (lastDetection != null && lastDetection.id == tagID)
-            return lastDetection.ftcPose.range;
+            return lastDetection.ftcPose.range * 0.0254;
         else
             return -1;
     }
@@ -144,15 +146,15 @@ public class AprilTagsDetection {
         return visionPortal;
     }
 
-    public double GetBearing(int id) {
+    public double getBearing(int id) {
         currentDetections = aprilTag.getDetections();
         for (AprilTagDetection detection : currentDetections)
-            if (detection.metadata != null && detection.id==id)
+            if (detection.metadata != null && detection.id == id)
                 return detection.ftcPose.bearing;
         return -999;
     }
 
-    public double GetElevation() {
+    public double getElevation() {
         return lastDetection.ftcPose.elevation;
     }
 }
