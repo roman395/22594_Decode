@@ -49,9 +49,8 @@ abstract class TeleOpBase extends LinearOpMode {
         telemetry.addLine("Ready to start!");
         telemetry.update();
         waitForStart();
-
         if (isStopRequested()) return;
-
+        turret.resetStartPose();
         // --- Main Loop ---
         while (opModeIsActive()) {
             shooter.teleOpController();

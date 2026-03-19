@@ -83,19 +83,33 @@ public class Intake {
             stopFeeding();
     }
 
-    public void controlUntilShooting(Gamepad gamepad) {
-        if (gamepad.right_bumper && getState()) {
-            grabbing();
-            feeding();
-        } else if (gamepad.right_bumper) {
-            grabbing();
-            stopFeeding();
-        } else if (gamepad.left_bumper) {
-            setIntakePower(-intakePower);
-            setFeederPower(-feederPower);
+    public void controlUntilShooting(Gamepad gamepad, boolean notUsingFish) {
+        if (!notUsingFish) {
+            if (gamepad.right_bumper && getState()) {
+                grabbing();
+                feeding();
+            } else if (gamepad.right_bumper) {
+                grabbing();
+                stopFeeding();
+            } else if (gamepad.left_bumper) {
+                setIntakePower(-intakePower);
+                setFeederPower(-feederPower);
+            } else {
+                stopGrabbing();
+                stopFeeding();
+            }
         } else {
-            stopGrabbing();
-            stopFeeding();
+
+            if (gamepad.right_bumper) {
+                grabbing();
+            } else if (gamepad.left_bumper) {
+                grabbing();
+                feeding();
+            } else {
+                stopGrabbing();
+                stopFeeding();
+            }
+
         }
     }
 

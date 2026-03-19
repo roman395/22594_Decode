@@ -19,8 +19,9 @@ public class Turret {
     public static double maxAngle = 145, maxIntegral = 0.3, minAngle = -123, cameraMultiply = 1, servoRange = 370, offset = 0;
     private boolean isCloseToBreake = false;
     public static double breakPose = 3.2;
-    public static double centerPose = 1.796;
+    public static double centerPose = 2.736;
     public static double inputMultiply = 0.5;
+    private boolean iCanSee = false;
 
     // Константы для детекта переходов
     private static final double MAX_VOLTAGE = 3.3;
@@ -33,8 +34,11 @@ public class Turret {
 
     private Telemetry t;
     private ElapsedTime pidTimer = new ElapsedTime();
-    private double lastTime, countOfFullTurn = 0, integral = 1, pidOutput, lastError = 0;
+    private ElapsedTime seenTimer = new ElapsedTime();
+    private double lastTime, countOfFullTurn = 0, integral = 0, pidOutput, lastError = 0;
     private double lastVoltage = 0;  // Храним предыдущее напряжение для детекта переходов
+    private double startPose = 0;
+    private double targetPose = 0;
 
     public Turret(LinearOpMode lom) {
         s1 = lom.hardwareMap.get(CRServo.class, RobotConstants.TurretServo1);
@@ -54,6 +58,7 @@ public class Turret {
 
         // Инициализация
         lastVoltage = s1En.getVoltage();
+        startPose = lastVoltage;
     }
 
     public void TeleOp() {
@@ -129,9 +134,6 @@ public class Turret {
         double dComponent = RobotConstants.TurretPid.d * derivative;
 
         pidOutput = pComponent + dComponent + iComponent;
-        t.addData("error", error);
-        t.addData("current", current);
-        t.addData("target", target);
 
         lastError = error;
         lastTime = current_time;
@@ -206,10 +208,24 @@ public class Turret {
         voltage = Math.min(MAX_VOLTAGE, Math.max(0, voltage));
         return voltage * VOLTAGE_TO_ANGLE;
     }
-    public void autonomousController(double error, double targetAngle) {
-        if(error==-999999)
-            PIDOnTarget(targetAngle, GetCurrentPosition());
-        else
-            PIDOnError(error, GetCurrentPosition());
+
+    public void advancedTelemetry(Telemetry telemetry) {
+        telemetry.addData("Servo pos", s1En.getVoltage());
+        telemetry.addData("Current Angle", GetCurrentPosition());
+        telemetry.addData("Current center pose", centerPose);
+        telemetry.addData("Current center pose", centerPose);
+    }
+
+    public void updateTurret() {
+        s1.setPower(PIDOnTarget(targetPose, GetCurrentPosition()));
+        s2.setPower(PIDOnTarget(targetPose, GetCurrentPosition()));
+    }
+
+    public void setTargetPose(double targetPose) {
+        this.targetPose = targetPose;
+    }
+
+    public void goToStart() {
+        targetPose = startPose;
     }
 }

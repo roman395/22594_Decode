@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class Shooter {
+    boolean notUseFish = false;
     AprilTagsDetection camera;
     Telemetry telemetry;
     Telemetry tel = PanelsTelemetry.INSTANCE.getFtcTelemetry();
@@ -116,7 +117,6 @@ public class Shooter {
             } else {
                 limelight3A.pipelineSwitch(2);
                 tel.addLine("LimeLight ready");
-                tel.update();
             }
             limelight3A.reloadPipeline();
         }
@@ -154,6 +154,8 @@ public class Shooter {
         controllerLED();
         if (gamepad.startWasPressed())
             handleControl = !handleControl;
+        if (gamepad.optionsWasPressed())
+            notUseFish = !notUseFish;
         if (cameraActive && !handleControl) {
             if (useLogitech)
                 camera.update();
@@ -163,13 +165,13 @@ public class Shooter {
                 state = STATE.OFF;
             switch (state) {
                 case OFF:
-                    intakeModule.controlUntilShooting(gamepad);
+                    intakeModule.controlUntilShooting(gamepad, notUseFish);
                     if (gamepad.circleWasPressed())
                         state = STATE.SPOILING;
                     updatePID(0, masterMotor, slaveMotor);
                     break;
                 case SPOILING:
-                    intakeModule.controlUntilShooting(gamepad);
+                    intakeModule.controlUntilShooting(gamepad, notUseFish);
                     updatePID(automatedVelocity, masterMotor, slaveMotor);
                     if (isCanShooting(distance))
                         state = STATE.SHOOTING;
@@ -225,32 +227,44 @@ public class Shooter {
 
     public boolean runAutonomousShootingSequence() {
         updateTarget();
-        while (cntShoot < targetCntShoot) {
-            switch (state) {
-                case OFF:
+
+        switch (state) {
+            case OFF:
+                state = STATE.SPOILING;
+                break;
+            case SPOILING:
+                intakeModule.stopAll();
+                updatePID(automatedVelocity, masterMotor, slaveMotor);
+                updateWall(automatedServoPose);
+
+                if (cntShoot < targetCntShoot && isCanShooting(distance)) {
+                    state = STATE.SHOOTING;
+                    autonomTimer.reset();
+                }
+
+                if (cntShoot > targetCntShoot - 1 || autonomTimer.milliseconds() > 2000) {
+                    shooterOff();
+                    intakeModule.stopAll();
+                    return true;
+                }
+                break;
+            case SHOOTING:
+                updatePID(automatedVelocity, masterMotor, slaveMotor);
+                intakeModule.enableAll();
+                if (currentError > 200 || autonomTimer.milliseconds() > 700) {
+                    cntShoot++;
+                    intakeModule.stopAll();
+                    autonomTimer.reset();
                     state = STATE.SPOILING;
-                    break;
-                case SPOILING:
-                    updatePID(automatedVelocity, masterMotor, slaveMotor);
-                    updateWall(automatedServoPose);
-                    turret.AutoAimingOnError(bearing);
-                    if (isCanShooting(distance))
-                        state = STATE.SHOOTING;
-                    break;
-                case SHOOTING:
-                    if (currentError > 120 || autonomTimer.milliseconds() > 1300) {
-                        cntShoot++;
-                        state = STATE.SPOILING;
-                    }
-                    if (cntShoot == targetCntShoot) {
-                        shooterOff();
-                        return true;
-                    }
-                    break;
-            }
+                }
+                break;
         }
 
         return false;
+    }
+
+    public void startSpooling(double velocity) {
+        updatePID(velocity, masterMotor, slaveMotor);
     }
 
     private void shooterOff() {
@@ -262,42 +276,42 @@ public class Shooter {
         state = STATE.OFF;
         automatedVelocity = 1600;
         automatedServoPose = 0.5;
+        cntShoot = 0;
         resetPID();
         autonomTimer.reset();
     }
 
     public void advancedTelemetry() {
-        if (cameraActive) {
-            telemetry.addData("Current manual velocity", manualVelocity);
-            telemetry.addData("Current auto velocity", automatedVelocity);
-            telemetry.addData("Current manual wall pose", manualServoPos);
-            telemetry.addData("Current manual wall pose", manualServoPos);
-            telemetry.addData("Current auto wall pose", distToWallPos(distance));
-            telemetry.addData("Current  wall pose", wallServo.getPosition());
-            telemetry.addData("Current distance to target", distance);
-            telemetry.addData("Current bearing to target ", bearing);
-            tel.addData("Current bearing to target", bearing);
-            telemetry.addData("Current exposure", RobotConstants.CameraExposure);
-            telemetry.addData("Current error", currentError);
-            telemetry.addData("Current master velocity", masterMotor.getVelocity());
-            telemetry.addData("Current slave velocity", slaveMotor.getVelocity());
-            telemetry.addData("Current handle state", handleControl);
-            telemetry.addData("Current shooter State", state);
-            telemetry.addData("Current fish State", intakeModule.getState());
+        boolean turretAligned = Math.abs(bearing) < 2.0 && bearing != -999999;
+        double threshold = (distance < RobotConstants.DistanceToFarCriticalError) ? RobotConstants.CloseCriticalError : RobotConstants.FarCriticalError;
+        boolean velocityReady = Math.abs(currentError) < threshold;
 
+        telemetry.addLine("--- SHOOTER DIAGNOSTICS ---");
+        telemetry.addData("State", state);
+        telemetry.addData("Shots Done", cntShoot + "/" + targetCntShoot);
+        telemetry.addData("Distance", distance);
+        telemetry.addData("Bearing", bearing);
+        telemetry.addData("1. Turret Aligned", turretAligned);
+        telemetry.addData("2. Velocity Ready", velocityReady + " (Err: " + (int) currentError + " < " + (int) threshold + ")");
+        telemetry.addData("-> WILL SHOOT", isCanShooting(distance));
+        telemetry.addLine();
+
+        if (cameraActive) {
+            telemetry.addData("Auto velocity", automatedVelocity);
+            telemetry.addData("Wall pose", wallServo.getPosition());
+            telemetry.addData("Master RPM", masterMotor.getVelocity());
+            telemetry.addData("Slave RPM", slaveMotor.getVelocity());
+            telemetry.addData("Fish Sensor", intakeModule.getState());
         } else {
-            telemetry.addLine("CAMERA BIMBIMBAMBAM");
+            telemetry.addLine("CAMERA NOT ACTIVE");
         }
-        telemetry.update();
-        tel.update();
     }
 
 
     private boolean isCanShooting(double distance) {
-        if (distance < RobotConstants.DistanceToFarCriticalError)
-            return currentError < RobotConstants.CloseCriticalError;
-        else
-            return currentError < RobotConstants.FarCriticalError;
+        boolean turretAligned = Math.abs(bearing) < 10 && distance != -999999;
+        double threshold = (distance < RobotConstants.DistanceToFarCriticalError) ? RobotConstants.CloseCriticalError : RobotConstants.FarCriticalError;
+        return Math.abs(currentError) < threshold && turretAligned;
     }
 
     private void handleAdjustment() {
@@ -361,9 +375,8 @@ public class Shooter {
                 if (fid.getFiducialId() == aprilTagId) {
                     distance = fid.getTargetPoseCameraSpace().getPosition().toUnit(DistanceUnit.METER).z;
                     automatedServoPose = distToWallPos(distance);
-                    automatedVelocity = distToVelocityApprox(distance/*, servoToAngle(automatedServoPose)*/);
+                    automatedVelocity = distToVelocityApprox(distance);
                     bearing = result.getTx();
-                    //bearing =Math.toDegrees( Math.atan2(fid.getTargetPoseCameraSpace().getPosition().toUnit(DistanceUnit.METER).x, fid.getTargetPoseCameraSpace().getPosition().toUnit(DistanceUnit.METER).z+46.45/100));
                 }
             }
 

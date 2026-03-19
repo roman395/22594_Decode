@@ -14,7 +14,6 @@ public class RobotConstants {
             StrafeEncoder = "RRM",
             ForwardEncoder = "FRM",
             Camera = "camera",
-
             IntakeMotor = "intake",
             FeederMotor = "feeder",
             TurretServo1 = "tServo1",
