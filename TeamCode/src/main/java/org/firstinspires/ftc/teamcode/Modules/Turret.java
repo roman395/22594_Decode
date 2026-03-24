@@ -1,14 +1,19 @@
 package org.firstinspires.ftc.teamcode.Modules;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.pedropathing.geometry.Pose;
+import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.RobotConstants;
 
 @Configurable
@@ -16,12 +21,12 @@ public class Turret {
     private CRServo s1, s2;
     private AnalogInput s1En, s2En;
     private Gamepad g;
-    public static double maxAngle = 145, maxIntegral = 0.3, minAngle = -123, cameraMultiply = 1, servoRange = 370, offset = 0;
-    private boolean isCloseToBreake = false;
+    public static double maxAngle = 335, maxIntegral = 0.3, minAngle = -20, cameraMultiply = 1, servoRange = 370, imuErrorCof = 0.3;
+    private boolean isCloseToBreake= false;
     public static double breakPose = 3.2;
-    public static double centerPose = 2.736;
+    public static double centerPose = 2.263;
     public static double inputMultiply = 0.5;
-    private boolean iCanSee = false;
+    private boolean goStart = false, iCanSee = false;
 
     // Константы для детекта переходов
     private static final double MAX_VOLTAGE = 3.3;
@@ -32,6 +37,7 @@ public class Turret {
     // При полном обороте датчика (3.3В) мы получаем servoRange градусов на выходе
     private static final double VOLTAGE_TO_ANGLE = servoRange / MAX_VOLTAGE;
 
+
     private Telemetry t;
     private ElapsedTime pidTimer = new ElapsedTime();
     private ElapsedTime seenTimer = new ElapsedTime();
@@ -39,11 +45,14 @@ public class Turret {
     private double lastVoltage = 0;  // Храним предыдущее напряжение для детекта переходов
     private double startPose = 0;
     private double targetPose = 0;
+    private double lastImuData = 0;
+    private double freshImuData = 0;
+    Pose goalPose;
 
-    public Turret(LinearOpMode lom) {
+    public Turret(LinearOpMode lom, Pose goalPose) {
         s1 = lom.hardwareMap.get(CRServo.class, RobotConstants.TurretServo1);
         s2 = lom.hardwareMap.get(CRServo.class, RobotConstants.TurretServo2);
-
+        this.goalPose = goalPose;
         s1En = lom.hardwareMap.get(AnalogInput.class, RobotConstants.TurretServoEncoder1);
         s2En = lom.hardwareMap.get(AnalogInput.class, RobotConstants.TurretServoEncoder2);
 
@@ -55,7 +64,6 @@ public class Turret {
         s2.setPower(0);
         g = lom.gamepad1;
         t = lom.telemetry;
-
         // Инициализация
         lastVoltage = s1En.getVoltage();
         startPose = lastVoltage;
@@ -89,17 +97,13 @@ public class Turret {
         s2.setPower(power);
     }
 
-    public void AutoAimingOnError(double error) {
+    public void AutoAimingOnError(double error, Pose current) {
         // 1. Сначала проверяем, валидная ли ошибка
-        if (error == -999999 || Math.abs(error) > 180) { // Ограничь максимальный поворот за раз
-            // Останавливаем моторы, если нет цели
-            s1.setPower(0);
-            s2.setPower(0);
+        double currentServoAngle = GetCurrentPosition();
+        if ((error == -999999 || Math.abs(error) > 180 )) { // Ограничь максимальный поворот за раз
+            aimingOnOdo(goalPose, current);
             return;
         }
-
-        double currentServoAngle = GetCurrentPosition();
-
         // 2. Проверяем, не выйдем ли за пределы после поворота
         double targetAngle = currentServoAngle + error;
 
@@ -119,7 +123,7 @@ public class Turret {
 
     private double PIDOnTarget(double target, double current) {
         double current_time = pidTimer.milliseconds();
-        double error = target - current + offset;
+        double error = target - current;
 
         double deltaTime = (current_time - lastTime);
         if (deltaTime < 1) {
@@ -141,7 +145,7 @@ public class Turret {
     }
 
     private double PIDOnError(double error, double current) {
-        error += offset;
+
         double current_time = pidTimer.milliseconds();
         double deltaTime = (current_time - lastTime);
         if (deltaTime < 1) {
@@ -160,7 +164,6 @@ public class Turret {
         lastTime = current_time;
         return pidOutput;
     }
-
     /**
      * Получить текущий угол турели с учётом всех оборотов
      * Возвращает угол в градусах (может быть больше 370 или отрицательным)
@@ -212,13 +215,19 @@ public class Turret {
     public void advancedTelemetry(Telemetry telemetry) {
         telemetry.addData("Servo pos", s1En.getVoltage());
         telemetry.addData("Current Angle", GetCurrentPosition());
-        telemetry.addData("Current center pose", centerPose);
+        telemetry.addData("imu last", lastImuData);
+        telemetry.addData("imu fresh", freshImuData);
         telemetry.addData("Current center pose", centerPose);
     }
 
-    public void updateTurret() {
-        s1.setPower(PIDOnTarget(targetPose, GetCurrentPosition()));
-        s2.setPower(PIDOnTarget(targetPose, GetCurrentPosition()));
+    public void updateTurret(double error) {
+        if (Math.abs(error) > 200 && !goStart) {
+            s1.setPower(PIDOnTarget(targetPose, GetCurrentPosition()));
+            s2.setPower(PIDOnTarget(targetPose, GetCurrentPosition()));
+        } else {
+            s1.setPower(PIDOnError(error, GetCurrentPosition()));
+            s2.setPower(PIDOnError(error, GetCurrentPosition()));
+        }
     }
 
     public void setTargetPose(double targetPose) {
@@ -227,5 +236,21 @@ public class Turret {
 
     public void goToStart() {
         targetPose = startPose;
+        goToStart();
+    }
+    public void saveData(){
+        GlobalStorage.lastTurretCenterPose = centerPose;
+        GlobalStorage.lastTurretFullTurns = countOfFullTurn;
+    }
+    public void loadData(){
+        centerPose = GlobalStorage.lastTurretCenterPose;
+        countOfFullTurn = GlobalStorage.lastTurretFullTurns
+        ;
+    }
+    public void aimingOnOdo(Pose goal, Pose current){
+        double targetAngle = Math.clamp(Math.toDegrees(current.getHeading()- Math.atan2(goal.getY() - current.getY(), goal.getX() - current.getX())), minAngle+5, maxAngle-5);
+        double power = PIDOnTarget(targetAngle, GetCurrentPosition());
+        s1.setPower(power);
+        s2.setPower(power);
     }
 }
