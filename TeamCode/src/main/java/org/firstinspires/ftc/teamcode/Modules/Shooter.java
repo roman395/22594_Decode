@@ -1,7 +1,9 @@
 package org.firstinspires.ftc.teamcode.Modules;
 
 import com.bylazar.camerastream.PanelsCameraStream;
+import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.limelightvision.LLFieldMap;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
@@ -25,7 +27,9 @@ import org.firstinspires.ftc.vision.VisionPortal;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+@Configurable
 public class Shooter {
+    public static double gangBangError = 300;
     boolean notUseFish = false;
     AprilTagsDetection camera;
     Telemetry telemetry;
@@ -47,7 +51,7 @@ public class Shooter {
     private double bearing = 0;
     private double distance = 0;
 
-    private enum STATE {OFF, SPOILING, SHOOTING}
+    public enum STATE {OFF, SPOILING, SHOOTING}
 
     STATE state = STATE.OFF;
     public final Intake intakeModule;
@@ -122,11 +126,11 @@ public class Shooter {
         }
     }
 
-    public Shooter(LinearOpMode linearOpMode, int aprilTagId) {
+    public Shooter(LinearOpMode linearOpMode, int aprilTagId, Pose goal) {
         masterMotor = linearOpMode.hardwareMap.get(DcMotorEx.class, RobotConstants.ShootRight);
         slaveMotor = linearOpMode.hardwareMap.get(DcMotorEx.class, RobotConstants.ShootLeft);
 
-        masterMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+        masterMotor.setDirection(DcMotorSimple.Direction.FORWARD);
         slaveMotor.setDirection(DcMotorSimple.Direction.FORWARD);
 
         masterMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -141,7 +145,7 @@ public class Shooter {
         CameraInitialization(linearOpMode);
         gamepad = linearOpMode.gamepad1;
         intakeModule = new Intake(linearOpMode);
-        turret = new Turret(linearOpMode);
+        turret = new Turret(linearOpMode, goal);
         telemetry = linearOpMode.telemetry;
     }
 
@@ -156,62 +160,34 @@ public class Shooter {
             handleControl = !handleControl;
         if (gamepad.optionsWasPressed())
             notUseFish = !notUseFish;
-        if (cameraActive && !handleControl) {
-            if (useLogitech)
-                camera.update();
-            updateTarget();
-            updateWall(automatedServoPose);
-            if (gamepad.squareWasPressed())
-                state = STATE.OFF;
-            switch (state) {
-                case OFF:
-                    intakeModule.controlUntilShooting(gamepad, notUseFish);
-                    if (gamepad.circleWasPressed())
-                        state = STATE.SPOILING;
-                    updatePID(0, masterMotor, slaveMotor);
-                    break;
-                case SPOILING:
-                    intakeModule.controlUntilShooting(gamepad, notUseFish);
-                    updatePID(automatedVelocity, masterMotor, slaveMotor);
-                    if (isCanShooting(distance))
-                        state = STATE.SHOOTING;
-                    break;
-                case SHOOTING:
-                    intakeModule.intakeControl(gamepad);
-                    intakeModule.feedingControl(gamepad);
-                    updatePID(automatedVelocity, masterMotor, slaveMotor);
-                    if (!isCanShooting(distance))
-                        state = STATE.SPOILING;
-                    break;
-            }
-        } else {
-            handleAdjustment();
-            wallServo.setPosition(manualServoPos);
-            if (gamepad.squareWasPressed())
-                state = STATE.OFF;
-            switch (state) {
-                case OFF:
-                    intakeModule.intakeControl(gamepad);
-                    if (gamepad.circleWasPressed())
-                        state = STATE.SPOILING;
-                    updatePID(0, masterMotor, slaveMotor);
-                    break;
-                case SPOILING:
-                    intakeModule.intakeControl(gamepad);
-                    updatePID(manualVelocity, masterMotor, slaveMotor);
-                    if (isCanShooting(camera.getDistance(aprilTagId)))
-                        state = STATE.SHOOTING;
-                    break;
-                case SHOOTING:
-                    intakeModule.intakeControl(gamepad);
-                    intakeModule.feedingControl(gamepad);
-                    updatePID(manualVelocity, masterMotor, slaveMotor);
-                    if (!isCanShooting(camera.getDistance(aprilTagId)))
-                        state = STATE.SPOILING;
-                    break;
-            }
+        if (useLogitech)
+            camera.update();
+        updateTarget();
+        updateWall(automatedServoPose);
+        if (gamepad.squareWasPressed())
+            state = STATE.OFF;
+        switch (state) {
+            case OFF:
+                intakeModule.controlUntilShooting(gamepad, notUseFish);
+                if (gamepad.circleWasPressed())
+                    state = STATE.SPOILING;
+                updatePID(0, masterMotor, slaveMotor);
+                break;
+            case SPOILING:
+                intakeModule.controlUntilShooting(gamepad, notUseFish);
+                updatePID(automatedVelocity, masterMotor, slaveMotor);
+                if (isCanShooting(distance))
+                    state = STATE.SHOOTING;
+                break;
+            case SHOOTING:
+                intakeModule.intakeControl(gamepad);
+                intakeModule.feedingControl(gamepad);
+                updatePID(automatedVelocity, masterMotor, slaveMotor);
+                if (!isCanShooting(distance))
+                    state = STATE.SPOILING;
+                break;
         }
-        advancedTelemetry();
+
     }
 
     public void testing(double shooterVelocity, double wallPose) {
@@ -263,6 +239,10 @@ public class Shooter {
         return false;
     }
 
+    public STATE getState() {
+        return state;
+    }
+
     public void startSpooling(double velocity) {
         updatePID(velocity, masterMotor, slaveMotor);
     }
@@ -281,7 +261,7 @@ public class Shooter {
         autonomTimer.reset();
     }
 
-    public void advancedTelemetry() {
+    public void advancedTelemetry(Telemetry telemetry) {
         boolean turretAligned = Math.abs(bearing) < 2.0 && bearing != -999999;
         double threshold = (distance < RobotConstants.DistanceToFarCriticalError) ? RobotConstants.CloseCriticalError : RobotConstants.FarCriticalError;
         boolean velocityReady = Math.abs(currentError) < threshold;
@@ -294,22 +274,17 @@ public class Shooter {
         telemetry.addData("1. Turret Aligned", turretAligned);
         telemetry.addData("2. Velocity Ready", velocityReady + " (Err: " + (int) currentError + " < " + (int) threshold + ")");
         telemetry.addData("-> WILL SHOOT", isCanShooting(distance));
-        telemetry.addLine();
+        telemetry.addData("Auto velocity", automatedVelocity);
+        telemetry.addData("Wall pose", wallServo.getPosition());
+        telemetry.addData("Master RPM", masterMotor.getVelocity());
+        telemetry.addData("Slave RPM", slaveMotor.getVelocity());
+        telemetry.addData("Fish Sensor", intakeModule.getState());
 
-        if (cameraActive) {
-            telemetry.addData("Auto velocity", automatedVelocity);
-            telemetry.addData("Wall pose", wallServo.getPosition());
-            telemetry.addData("Master RPM", masterMotor.getVelocity());
-            telemetry.addData("Slave RPM", slaveMotor.getVelocity());
-            telemetry.addData("Fish Sensor", intakeModule.getState());
-        } else {
-            telemetry.addLine("CAMERA NOT ACTIVE");
-        }
     }
 
 
     private boolean isCanShooting(double distance) {
-        boolean turretAligned = Math.abs(bearing) < 10 && distance != -999999;
+        boolean turretAligned = Math.abs(bearing) < 15 && distance != -999999;
         double threshold = (distance < RobotConstants.DistanceToFarCriticalError) ? RobotConstants.CloseCriticalError : RobotConstants.FarCriticalError;
         return Math.abs(currentError) < threshold && turretAligned;
     }
@@ -335,7 +310,7 @@ public class Shooter {
 
     private void updatePID(double targetVelocity, DcMotorEx master, DcMotorEx slave) {
         double current_time = pidTimer.milliseconds();
-        double currentVelocity = -master.getVelocity();
+        double currentVelocity = master.getVelocity();
         currentError = targetVelocity - currentVelocity;
 
         double deltaTime = (current_time - lastTime);
@@ -353,7 +328,8 @@ public class Shooter {
             pidOutput = feedForwardPower + pComponent + iComponent + dComponent;
         else
             pidOutput = 0;
-
+       // if (currentError > gangBangError)
+         //ы   pidOutput = 1;
         slave.setPower(pidOutput);
         master.setPower(pidOutput);
         lastError = currentError;
@@ -415,7 +391,7 @@ public class Shooter {
     }
 
     private double distToWallPos(double x) {
-        return Math.clamp(0.1230 * x * x * x - 0.8747 * x * x + 1.9441 * x - 0.3659, 0.1, 1);
+        return Math.clamp(-0.0243 * x * x + 0.3858 * x - 0.0672, 0.1, 1);
     }
 
     private double distToVelocityPhysic(double dist, double launchAngle) {
@@ -423,6 +399,6 @@ public class Shooter {
     }
 
     private double distToVelocityApprox(double x) {
-        return -75.0221 * x * x * x + 504.3247 * x * x - 790.9705 * x + 2007.3133;
+        return -9.9736 * x * x * x + 34.0362 * x * x + 283.1934 * x + 1185.0377;
     }
 }
