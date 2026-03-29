@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import org.firstinspires.ftc.teamcode.Modules.GlobalStorage;
 import org.firstinspires.ftc.teamcode.Modules.Intake;
 import org.firstinspires.ftc.teamcode.Modules.Mecanum;
 import org.firstinspires.ftc.teamcode.Modules.Shooter;
@@ -42,22 +43,31 @@ abstract class TeleOpBase extends LinearOpMode {
         // --- Initialization ---
         mecanum = new Mecanum(this);
         intake = new Intake(this);
-        shooter = new Shooter(this, getAprilTagId());
-        turret = new Turret(this);
+        shooter = new Shooter(this, getAprilTagId(), getGoalPose());
+        turret = new Turret(this, getGoalPose());
         telemetry.addLine("Alliance: " + getAllianceName());
         telemetry.addLine("Targeting AprilTag ID: " + getAprilTagId());
         telemetry.addLine("Ready to start!");
+        telemetry.addData("My x", GlobalStorage.lastPose.getX());
+        telemetry.addData("My y", GlobalStorage.lastPose.getY());
+        telemetry.addData("My heading", GlobalStorage.lastPose.getHeading());
         telemetry.update();
         waitForStart();
         if (isStopRequested()) return;
-        turret.resetStartPose();
+        turret.loadData();
+        mecanum.loadStartPose();
         // --- Main Loop ---
         while (opModeIsActive()) {
             shooter.teleOpController();
-            turret.AutoAimingOnError(shooter.getBearing());
+            turret.AutoAimingOnError(shooter.getBearing(), mecanum.getPose(), shooter.getState());
+            //turret.advancedTelemetry(telemetry);
+            shooter.advancedTelemetry(telemetry);
+            telemetry.addData("sensor dist", intake.getDistance());
             mecanum.teleOp();
             telemetry.update();
         }
+        turret.saveData();
+        GlobalStorage.lastPose = mecanum.getPose();
     }
 }
 
@@ -78,7 +88,7 @@ public class TeleopBLUE extends TeleOpBase {
     }
 
     @Override
-    protected Pose getGoalPose(){return new Pose(17, 132);}
+    protected Pose getGoalPose(){return new Pose(15, 135);}
 }
 
 // =================================================================================================

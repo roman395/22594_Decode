@@ -2,52 +2,51 @@ package org.firstinspires.ftc.teamcode.Modules;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
-import com.qualcomm.hardware.bosch.BNO055IMU;
-import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
-import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.teamcode.Modules.GlobalStorage;
 import org.firstinspires.ftc.teamcode.RobotConstants;
 
 @Configurable
 public class Turret {
-    private CRServo s1, s2;
-    private AnalogInput s1En, s2En;
-    private Gamepad g;
+    private final CRServo s1;
+    private final CRServo s2;
+    private final AnalogInput s1En;
+    private final AnalogInput s2En;
+    private final Gamepad g;
     public static double maxAngle = 335, maxIntegral = 0.3, minAngle = -20, cameraMultiply = 1, servoRange = 370, imuErrorCof = 0.3;
-    private boolean isCloseToBreake= false;
+    private final boolean isCloseToBreake = false;
     public static double breakPose = 3.2;
     public static double centerPose = 2.263;
     public static double inputMultiply = 0.5;
-    private boolean goStart = false, iCanSee = false;
+    private final boolean goStart = false;
+    private boolean iCanSee = false;
 
-    // Константы для детекта переходов
+    // Stability and Calibration Variables
+    public static double headingCorrection = 0;
+    public static double stabilityDelay = 500;
+
     private static final double MAX_VOLTAGE = 3.3;
-    private static final double LOW_VOLTAGE_THRESHOLD = 0.2;      // В вольтах
-    private static final double HIGH_VOLTAGE_THRESHOLD = 3.1;    // В вольтах
-
-    // Переводной коэффициент: (вольтаж) -> (угол с учётом редукции)
-    // При полном обороте датчика (3.3В) мы получаем servoRange градусов на выходе
     private static final double VOLTAGE_TO_ANGLE = servoRange / MAX_VOLTAGE;
 
 
-    private Telemetry t;
-    private ElapsedTime pidTimer = new ElapsedTime();
-    private ElapsedTime seenTimer = new ElapsedTime();
+    private final Telemetry t;
+    private final ElapsedTime pidTimer = new ElapsedTime();
+    private final ElapsedTime seenTimer = new ElapsedTime();
     private double lastTime, countOfFullTurn = 0, integral = 0, pidOutput, lastError = 0;
-    private double lastVoltage = 0;  // Храним предыдущее напряжение для детекта переходов
+    private double lastVoltage = 0;
     private double startPose = 0;
     private double targetPose = 0;
-    private double lastImuData = 0;
-    private double freshImuData = 0;
     Pose goalPose;
+    Telemetry telemetry;
+    private boolean isLocked = false;
+
 
     public Turret(LinearOpMode lom, Pose goalPose) {
         s1 = lom.hardwareMap.get(CRServo.class, RobotConstants.TurretServo1);
@@ -58,15 +57,19 @@ public class Turret {
 
         s1.setDirection(DcMotorSimple.Direction.REVERSE);
         s2.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        // IMPORTANT: Axon encoder initialization
         s1.setPower(1);
         s2.setPower(1);
         s1.setPower(0);
         s2.setPower(0);
+
         g = lom.gamepad1;
         t = lom.telemetry;
-        // Инициализация
+        loadData();
         lastVoltage = s1En.getVoltage();
         startPose = lastVoltage;
+        telemetry = lom.telemetry;
     }
 
     public void TeleOp() {
@@ -82,11 +85,8 @@ public class Turret {
             s1.setPower(0);
             s2.setPower(0);
         }
-        t.addData("servo 1 voltage:", s1En.getVoltage());
-        t.addData("servo 2 voltage:", s2En.getVoltage());
         t.addData("turret angle:", currentPos);
-        t.addData("full rotations:", countOfFullTurn);
-        t.addData("center pose", centerPose);
+        t.addData("heading correction:", headingCorrection);
     }
 
     public void AutoAimingOnTarget(double bearing) {
@@ -97,127 +97,115 @@ public class Turret {
         s2.setPower(power);
     }
 
-    public void AutoAimingOnError(double error, Pose current) {
-        // 1. Сначала проверяем, валидная ли ошибка
+    public void AutoAimingOnError(double error, Pose current, Shooter.STATE st) {
         double currentServoAngle = GetCurrentPosition();
-        if ((error == -999999 || Math.abs(error) > 180 )) { // Ограничь максимальный поворот за раз
-            aimingOnOdo(goalPose, current);
-            return;
-        }
-        // 2. Проверяем, не выйдем ли за пределы после поворота
-        double targetAngle = currentServoAngle + error;
+        if(g.backWasPressed())
+            isLocked =!isLocked;
+        if(!isLocked) {
+            if (error != -999999 && Math.abs(error) < 90) {
+                seenTimer.reset();
+                iCanSee = true;
 
-        // Нормализуем targetAngle в диапазон [-180..180] относительно центра
-        // чтобы корректно сравнивать с minAngle и maxAngle
-        // 3. Если целевой угол в пределах допустимого
-        if (targetAngle >= minAngle && targetAngle <= maxAngle) {
-            double power = PIDOnError(error, currentServoAngle);
-            s1.setPower(power);
-            s2.setPower(power);
-        } else {
-            // Если выходим за пределы - не двигаемся
-            s1.setPower(0);
-            s2.setPower(0);
+                // Heading correction logic (standard 360 circle)
+                double fieldAngleDeg = Math.toDegrees(Math.atan2(goalPose.getY() - current.getY(), goalPose.getX() - current.getX()));
+                double relativeGoalAngleDeg = currentServoAngle + error;
+                double actualHeadingDeg = fieldAngleDeg + relativeGoalAngleDeg;
+                double currentHeadingDeg = Math.toDegrees(current.getHeading());
+
+                headingCorrection = actualHeadingDeg - currentHeadingDeg;
+                while (headingCorrection > 180) headingCorrection -= 360;
+                while (headingCorrection <= -180) headingCorrection += 360;
+
+                // Target calculation
+                double targetAngle = currentServoAngle + error;
+
+                // Intelligent Range-Aware Wrapping
+                while (targetAngle - currentServoAngle > 180) targetAngle -= 360;
+                while (targetAngle - currentServoAngle <= -180) targetAngle += 360;
+
+                // Check if jumping 360 degrees recovers a valid position
+                if (targetAngle < minAngle && targetAngle + 360 <= maxAngle) targetAngle += 360;
+                else if (targetAngle > maxAngle && targetAngle - 360 >= minAngle)
+                    targetAngle -= 360;
+
+                if (targetAngle >= minAngle && targetAngle <= maxAngle) {
+                    double power = PIDOnError(targetAngle - currentServoAngle, currentServoAngle);
+                    s1.setPower(power);
+                    s2.setPower(power);
+                } else {
+                    s1.setPower(0);
+                    s2.setPower(0);
+                }
+            } else {
+                if (!(st == Shooter.STATE.SHOOTING && g.right_bumper)) {
+                    if (seenTimer.milliseconds() > stabilityDelay || !iCanSee) {
+                        iCanSee = false;
+                        aimingOnOdo(goalPose, current);
+                    }
+                } else {
+                    s1.setPower(0);
+                    s2.setPower(0);
+                }
+            }
         }
     }
 
     private double PIDOnTarget(double target, double current) {
         double current_time = pidTimer.milliseconds();
         double error = target - current;
-
         double deltaTime = (current_time - lastTime);
-        if (deltaTime < 1) {
-            return 0;
-        }
+        if (deltaTime < 1) return 0;
 
         double pComponent = RobotConstants.TurretPid.p * error;
-        integral += error * deltaTime;
-        integral = Math.clamp(integral, -maxIntegral, maxIntegral);
+        integral = Math.clamp(integral + (error * deltaTime), -maxIntegral, maxIntegral);
         double iComponent = integral * RobotConstants.TurretPid.i;
         double derivative = (error - lastError) / deltaTime;
         double dComponent = RobotConstants.TurretPid.d * derivative;
-
-        pidOutput = pComponent + dComponent + iComponent;
+        double fComponent = (Math.abs(error) > 0.5) ? Math.signum(error) * RobotConstants.TurretPid.f : 0;
 
         lastError = error;
         lastTime = current_time;
-        return pidOutput;
+        return pComponent + dComponent + iComponent + fComponent;
     }
 
     private double PIDOnError(double error, double current) {
-
         double current_time = pidTimer.milliseconds();
         double deltaTime = (current_time - lastTime);
-        if (deltaTime < 1) {
-            return 0;
-        }
+        if (deltaTime < 1) return 0;
 
         double pComponent = RobotConstants.TurretPid.p * error;
-        integral += error * deltaTime;
-        integral = Math.clamp(integral, -maxIntegral, maxIntegral);
+        integral = Math.clamp(integral + (error * deltaTime), -maxIntegral, maxIntegral);
         double iComponent = integral * RobotConstants.TurretPid.i;
         double derivative = (error - lastError) / deltaTime;
         double dComponent = RobotConstants.TurretPid.d * derivative;
-        pidOutput = pComponent + dComponent + iComponent;
+        double fComponent = (Math.abs(error) > 0.5) ? Math.signum(error) * RobotConstants.TurretPid.f : 0;
 
         lastError = error;
         lastTime = current_time;
-        return pidOutput;
+        return pComponent + dComponent + iComponent + fComponent;
     }
-    /**
-     * Получить текущий угол турели с учётом всех оборотов
-     * Возвращает угол в градусах (может быть больше 370 или отрицательным)
-     */
+
     public double GetCurrentPosition() {
         double currentVoltage = s1En.getVoltage();
         currentVoltage = Math.min(MAX_VOLTAGE, Math.max(0, currentVoltage));
-
-        // Вычисляем изменение
         double voltageChange = currentVoltage - lastVoltage;
 
-        // Если изменение больше половины диапазона - значит перескочили через границу
-        if (voltageChange > MAX_VOLTAGE / 2) {
-            // Было мало, стало много? Нет, наоборот: если изменение положительное и большое,
-            // значит мы перешли с ~0 на ~3.3 (движение назад)
-            countOfFullTurn--; // Движение назад
-        } else if (voltageChange < -MAX_VOLTAGE / 2) {
-            // Отрицательное большое изменение = перешли с 3.3 на 0 (движение вперед)
-            countOfFullTurn++; // Движение вперед
-        }
-
-        // Проверка на близость к "точке разрыва" для замедления
-        isCloseToBreake = Math.abs(currentVoltage - breakPose) < 0.5;
+        if (voltageChange > MAX_VOLTAGE / 2) countOfFullTurn--;
+        else if (voltageChange < -MAX_VOLTAGE / 2) countOfFullTurn++;
 
         lastVoltage = currentVoltage;
-
         return (currentVoltage - centerPose) * VOLTAGE_TO_ANGLE + countOfFullTurn * servoRange;
     }
 
-    /**
-     * Сброс нулевой позиции (калибровка)
-     */
     public void resetStartPose() {
         centerPose = s1En.getVoltage();
         countOfFullTurn = 0;
-        lastVoltage = centerPose; // Важно! Обновляем lastVoltage при сбросе
-    }
-
-    public double getS1Pos() {
-        return s1En.getVoltage();
-    }
-
-    public double getRawAngle() {
-        double voltage = s1En.getVoltage();
-        voltage = Math.min(MAX_VOLTAGE, Math.max(0, voltage));
-        return voltage * VOLTAGE_TO_ANGLE;
+        lastVoltage = centerPose;
     }
 
     public void advancedTelemetry(Telemetry telemetry) {
-        telemetry.addData("Servo pos", s1En.getVoltage());
-        telemetry.addData("Current Angle", GetCurrentPosition());
-        telemetry.addData("imu last", lastImuData);
-        telemetry.addData("imu fresh", freshImuData);
-        telemetry.addData("Current center pose", centerPose);
+        telemetry.addData("Turret Angle", GetCurrentPosition());
+        telemetry.addData("Heading Correction", headingCorrection);
     }
 
     public void updateTurret(double error) {
@@ -234,22 +222,34 @@ public class Turret {
         this.targetPose = targetPose;
     }
 
-    public void goToStart() {
-        targetPose = startPose;
-        goToStart();
-    }
-    public void saveData(){
+    public void saveData() {
         GlobalStorage.lastTurretCenterPose = centerPose;
         GlobalStorage.lastTurretFullTurns = countOfFullTurn;
+        GlobalStorage.lastDriftOffset = headingCorrection;
     }
-    public void loadData(){
+
+    public void loadData() {
         centerPose = GlobalStorage.lastTurretCenterPose;
-        countOfFullTurn = GlobalStorage.lastTurretFullTurns
-        ;
+        countOfFullTurn = GlobalStorage.lastTurretFullTurns;
+        headingCorrection = GlobalStorage.lastDriftOffset;
     }
-    public void aimingOnOdo(Pose goal, Pose current){
-        double targetAngle = Math.clamp(Math.toDegrees(current.getHeading()- Math.atan2(goal.getY() - current.getY(), goal.getX() - current.getX())), minAngle+5, maxAngle-5);
-        double power = PIDOnTarget(targetAngle, GetCurrentPosition());
+
+    public void aimingOnOdo(Pose goal, Pose current) {
+        double currentServoAngle = GetCurrentPosition();
+        double fieldAngleDeg = Math.toDegrees(Math.atan2(goal.getY() - current.getY(), goal.getX() - current.getX()));
+        double correctedHeading = Math.toDegrees(current.getHeading()) + headingCorrection;
+        double targetAngle = correctedHeading - fieldAngleDeg;
+
+        // Intelligent Range-Aware Wrapping
+        while (targetAngle - currentServoAngle > 180) targetAngle -= 360;
+        while (targetAngle - currentServoAngle <= -180) targetAngle += 360;
+
+        // Check if jumping 360 degrees recovers a valid position
+        if (targetAngle < minAngle && targetAngle + 360 <= maxAngle) targetAngle += 360;
+        else if (targetAngle > maxAngle && targetAngle - 360 >= minAngle) targetAngle -= 360;
+
+        targetAngle = Math.clamp(targetAngle, minAngle, maxAngle);
+        double power = PIDOnTarget(targetAngle, currentServoAngle);
         s1.setPower(power);
         s2.setPower(power);
     }

@@ -1,23 +1,26 @@
 package org.firstinspires.ftc.teamcode.Modules;
 
+import com.qualcomm.hardware.rev.Rev2mDistanceSensor;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.Gamepad;
 
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.RobotConstants;
 
 public class Intake {
     private final double intakePower = 1;
     private final double feederPower = -1;
     private final DcMotor intakeMotor, feederMotor;
-    private final DigitalChannel fish;
+    private final Rev2mDistanceSensor fish;
+    public static double normalDistance = 185;
 
     public Intake(LinearOpMode linearOpMode) {
         intakeMotor = linearOpMode.hardwareMap.get(DcMotor.class, RobotConstants.IntakeMotor);
         feederMotor = linearOpMode.hardwareMap.get(DcMotor.class, RobotConstants.FeederMotor);
-        fish = linearOpMode.hardwareMap.get(DigitalChannel.class, RobotConstants.Fish);
+        fish = linearOpMode.hardwareMap.get(Rev2mDistanceSensor.class, RobotConstants.RevDistanceSensor);
         intakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         feederMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         intakeMotor.setDirection(DcMotorSimple.Direction.FORWARD);
@@ -51,7 +54,7 @@ public class Intake {
     }
 
     public boolean getState() {
-        return fish.getState();
+        return fish.getDistance(DistanceUnit.MM) >= normalDistance - 10;
     }
 
     public void stopAll() {
@@ -122,5 +125,9 @@ public class Intake {
             stopFeeding();
         }
     }
+    public double getDistance(){
+        return fish.getDistance(DistanceUnit.MM);
+    }
+
 }
 

@@ -10,6 +10,7 @@ import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
+import org.firstinspires.ftc.teamcode.Modules.GlobalStorage;
 import org.firstinspires.ftc.teamcode.Modules.Intake;
 import org.firstinspires.ftc.teamcode.Modules.Shooter;
 import org.firstinspires.ftc.teamcode.Modules.Turret;
@@ -31,14 +32,15 @@ public class AutoFarRed extends LinearOpMode {
 
     // The AprilTag ID for the red alliance backdrop
     private static final int APRILTAG_TARGET_ID = 24;
+    private static final Pose goal = new Pose(130,132);
 
     @Override
     public void runOpMode() {
         // --- Initialization ---
         panelsTelemetry = PanelsTelemetry.INSTANCE.getTelemetry();
-        shooter = new Shooter(this, APRILTAG_TARGET_ID);
+        shooter = new Shooter(this, APRILTAG_TARGET_ID, goal);
         intake = new Intake(this);
-        turret = new Turret(this);
+        turret = new Turret(this, goal);
         follower = Constants.createFollower(hardwareMap);
         myPath = new Paths(follower);
 
@@ -56,21 +58,25 @@ public class AutoFarRed extends LinearOpMode {
         shooter.resetAutonomousShootingSequence();
         while (!shooter.runAutonomousShootingSequence()) {
             //turret.autonomousController(shooter.getBearing(), 5);
-            shooter.advancedTelemetry();
-            turret.advancedTelemetry(telemetry);
+            shooter.advancedTelemetry(telemetry);
+            //turret.advancedTelemetry(telemetry);
             telemetry.update();
             follower.update();
+            turret.saveData();
+            GlobalStorage.lastPose = follower.getPose();
         }
         follower.followPath(myPath.Path2);
         intake.grabbingAutonomous();
-        turret.goToStart();
         waitUntilPathDone();
+
 
     }
 
     private void waitUntilPathDone() {
         while (opModeIsActive() && follower.isBusy()) {
             follower.update();
+            turret.saveData();
+            GlobalStorage.lastPose = follower.getPose();
         }
     }
 

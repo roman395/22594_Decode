@@ -20,12 +20,12 @@ public class RobotConstants {
             TurretServo2 = "tServo2",
             TurretServoEncoder1 = "tServoEn1",
             TurretServoEncoder2 = "tServoEn2",
-            Fish = "fish",
+            RevDistanceSensor = "sensor",
             ShootServo = "shootS",
             ShootLeft = "shootL",
             ShootRight = "shootR";
-    public static PIDFCoefficients ShooterPid = new PIDFCoefficients(0.02, 0, 0, 0);
-    public static PIDFCoefficients TurretPid = new PIDFCoefficients(0.01, 0.04, 0.01, 0);
+    public static PIDFCoefficients ShooterPid = new PIDFCoefficients(0.003, 0, 0, 0.00036);
+    public static PIDFCoefficients TurretPid = new PIDFCoefficients(0.005, 0, 0.0005, 0.08);
 
     public static long CameraExposure = 0;
     public static double DistanceToFarCriticalError = 1500;

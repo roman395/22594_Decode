@@ -20,7 +20,7 @@ public class gey extends LinearOpMode {
     Turret t;
     @Override
     public void runOpMode() throws InterruptedException {
-        t = new Turret(this);
+        //t = new Turret(this);
         //Shooter sh = new Shooter(this, 23);
         //tel = PanelsTelemetry.INSTANCE.getFtcTelemetry();
         waitForStart();
@@ -32,7 +32,7 @@ public class gey extends LinearOpMode {
            // sh.updateTarget();
             //telemetry.addData("bearing", sh.getBearing());
             //telemetry.addData("distance", sh.getDistance());
-            telemetry.addData("servo 1 output", t.getS1Pos());
+            telemetry.addData("servo 1 output",1);
             telemetry.update();
 //            tel.update();
         }

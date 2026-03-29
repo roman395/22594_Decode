@@ -15,5 +15,5 @@ public class TeleopRED extends TeleOpBase {
         return "RED";
     }
     @Override
-    protected Pose getGoalPose(){return new Pose(127,132);}
+    protected Pose getGoalPose(){return new Pose(130,130);}
 }

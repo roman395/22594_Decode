@@ -4,7 +4,6 @@ import com.bylazar.camerastream.PanelsCameraStream;
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.pedropathing.geometry.Pose;
-import com.qualcomm.hardware.limelightvision.LLFieldMap;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
@@ -18,7 +17,6 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.Camera.AprilTagsDetection;
 import org.firstinspires.ftc.teamcode.RobotConstants;
@@ -29,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 @Configurable
 public class Shooter {
-    public static double gangBangError = 300;
+    public static double gangBangError = 100;
     boolean notUseFish = false;
     AprilTagsDetection camera;
     Telemetry telemetry;
@@ -44,8 +42,6 @@ public class Shooter {
     private final ElapsedTime autonomTimer = new ElapsedTime();
     public static int LEDDuration = 1000;
     private boolean LEDState = false;
-    private double manualServoPos = 0;
-    private double manualVelocity = 0;
     private double automatedVelocity = 0;
     private double automatedServoPose = 0.1;
     private double bearing = 0;
@@ -102,7 +98,6 @@ public class Shooter {
                 handleControl = true;
                 return;
             }
-            //camera.getPortal().stopStreaming();
             camera.getPortal().resumeStreaming();
             PanelsCameraStream.INSTANCE.startStream(camera.getPortal(), 60);
 
@@ -112,7 +107,7 @@ public class Shooter {
         } else {
             limelight3A = linearOpMode.hardwareMap.get(Limelight3A.class, "limelight");
             limelight3A.start();
-            if (aprilTagId == 20) {//TODO add normal tags, not motive
+            if (aprilTagId == 20) {
                 limelight3A.pipelineSwitch(0);
                 tel.addLine("LimeLight ready");
             } else if (aprilTagId == 24) {
@@ -187,7 +182,6 @@ public class Shooter {
                     state = STATE.SPOILING;
                 break;
         }
-
     }
 
     public void testing(double shooterVelocity, double wallPose) {
@@ -242,9 +236,12 @@ public class Shooter {
     public STATE getState() {
         return state;
     }
-
+    private double spoilingVelocity;
     public void startSpooling(double velocity) {
-        updatePID(velocity, masterMotor, slaveMotor);
+        spoilingVelocity = velocity;
+    }
+    public void updateSpooling(){
+        updatePID(spoilingVelocity, masterMotor, slaveMotor);
     }
 
     private void shooterOff() {
@@ -263,8 +260,7 @@ public class Shooter {
 
     public void advancedTelemetry(Telemetry telemetry) {
         boolean turretAligned = Math.abs(bearing) < 2.0 && bearing != -999999;
-        double threshold = (distance < RobotConstants.DistanceToFarCriticalError) ? RobotConstants.CloseCriticalError : RobotConstants.FarCriticalError;
-        boolean velocityReady = Math.abs(currentError) < threshold;
+        boolean velocityReady = Math.abs(currentError) < 20;
 
         telemetry.addLine("--- SHOOTER DIAGNOSTICS ---");
         telemetry.addData("State", state);
@@ -272,37 +268,21 @@ public class Shooter {
         telemetry.addData("Distance", distance);
         telemetry.addData("Bearing", bearing);
         telemetry.addData("1. Turret Aligned", turretAligned);
-        telemetry.addData("2. Velocity Ready", velocityReady + " (Err: " + (int) currentError + " < " + (int) threshold + ")");
+        telemetry.addData("2. Velocity Ready", velocityReady + " (Err: " + (int) currentError + " < 20)");
         telemetry.addData("-> WILL SHOOT", isCanShooting(distance));
         telemetry.addData("Auto velocity", automatedVelocity);
         telemetry.addData("Wall pose", wallServo.getPosition());
         telemetry.addData("Master RPM", masterMotor.getVelocity());
         telemetry.addData("Slave RPM", slaveMotor.getVelocity());
         telemetry.addData("Fish Sensor", intakeModule.getState());
-
     }
-
 
     private boolean isCanShooting(double distance) {
-        boolean turretAligned = Math.abs(bearing) < 15 && distance != -999999;
-        double threshold = (distance < RobotConstants.DistanceToFarCriticalError) ? RobotConstants.CloseCriticalError : RobotConstants.FarCriticalError;
-        return Math.abs(currentError) < threshold && turretAligned;
-    }
-
-    private void handleAdjustment() {
-        if (gamepad.dpadRightWasPressed())
-            manualVelocity += 50;
-        else if (gamepad.dpadLeftWasPressed())
-            manualVelocity -= 50;
-        if (gamepad.dpadUpWasPressed())
-            manualServoPos += 0.1;
-        else if (gamepad.dpadDownWasPressed())
-            manualServoPos -= 0.1;
+        boolean turretAligned = Math.abs(bearing) < 8.0 && distance != -999999;
+        return Math.abs(currentError) <= 35 && turretAligned;
     }
 
     private final ElapsedTime pidTimer = new ElapsedTime();
-
-    private double integralSum = 0.0;
     private double lastError = 0.0;
     private double lastTime = 0.0;
     private double currentError = 0.0;
@@ -314,26 +294,34 @@ public class Shooter {
         currentError = targetVelocity - currentVelocity;
 
         double deltaTime = (current_time - lastTime);
-        if (deltaTime < 1) {
-            return;
+        if (deltaTime < 1) return;
+
+        if (targetVelocity > 0) {
+            if (currentError > gangBangError) {
+                pidOutput = 1.0;
+            } else {
+                double fComponent = targetVelocity * RobotConstants.ShooterPid.f;
+                double pComponent = RobotConstants.ShooterPid.p * currentError;
+                double derivative = (currentError - lastError) / deltaTime;
+                double dComponent = RobotConstants.ShooterPid.d * derivative;
+
+                pidOutput = fComponent + pComponent + dComponent;
+            }
+        } else {
+            pidOutput = 0;
         }
 
-        double pComponent = RobotConstants.ShooterPid.p * currentError;
-        double iComponent = 0;
-        double derivative = (currentError - lastError) / deltaTime;
-        double dComponent = RobotConstants.ShooterPid.d * derivative;
-
-        double feedForwardPower = RobotConstants.ShooterPid.f;
-        if (targetVelocity != 0)
-            pidOutput = feedForwardPower + pComponent + iComponent + dComponent;
-        else
-            pidOutput = 0;
-       // if (currentError > gangBangError)
-         //ы   pidOutput = 1;
+        pidOutput = Math.clamp(pidOutput, 0, 1.0);
         slave.setPower(pidOutput);
         master.setPower(pidOutput);
+
         lastError = currentError;
         lastTime = current_time;
+        PanelsTelemetry.INSTANCE.getTelemetry().addData("Shooter PID", pidOutput);
+        PanelsTelemetry.INSTANCE.getTelemetry().addData("master", master.getVelocity());
+        PanelsTelemetry.INSTANCE.getTelemetry().addData("target", targetVelocity);
+        PanelsTelemetry.INSTANCE.getTelemetry().addData("error", currentError);
+        PanelsTelemetry.INSTANCE.getTelemetry().update();
     }
 
     public void updateTarget() {
@@ -341,29 +329,28 @@ public class Shooter {
             if (!cameraActive || camera.getDistance(aprilTagId) == -1)
                 return;
 
-            automatedServoPose = distToWallPos(camera.getDistance(aprilTagId));
-            automatedVelocity = distToVelocityPhysic(camera.getDistance(aprilTagId), servoToAngle(automatedServoPose));
-            bearing = camera.getBearing(aprilTagId);
             distance = camera.getDistance(aprilTagId);
+            bearing = camera.getBearing(aprilTagId);
         } else if ((result = limelight3A.getLatestResult()) != null && result.isValid()) {
             List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
             for (LLResultTypes.FiducialResult fid : fiducialResults) {
                 if (fid.getFiducialId() == aprilTagId) {
                     distance = fid.getTargetPoseCameraSpace().getPosition().toUnit(DistanceUnit.METER).z;
-                    automatedServoPose = distToWallPos(distance);
-                    automatedVelocity = distToVelocityApprox(distance);
                     bearing = result.getTx();
                 }
             }
-
         } else {
             bearing = -999999;
             distance = -999999;
         }
+
+        if (distance != -999999) {
+            automatedServoPose = distToWallPos(distance);
+            automatedVelocity = distToVelocityApprox(distance);
+        }
     }
 
     private void resetPID() {
-        integralSum = 0;
         lastError = 0;
         lastTime = 0;
         pidOutput = 0;
@@ -391,7 +378,7 @@ public class Shooter {
     }
 
     private double distToWallPos(double x) {
-        return Math.clamp(-0.0243 * x * x + 0.3858 * x - 0.0672, 0.1, 1);
+        return x > 0.94 ? 1 : 0.3;
     }
 
     private double distToVelocityPhysic(double dist, double launchAngle) {
@@ -399,6 +386,6 @@ public class Shooter {
     }
 
     private double distToVelocityApprox(double x) {
-        return -9.9736 * x * x * x + 34.0362 * x * x + 283.1934 * x + 1185.0377;
+        return -79.0213 * x * x * x + 353.2320 * x * x - 189.8235 * x + 1430.7563;
     }
 }

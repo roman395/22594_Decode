@@ -16,14 +16,13 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 @Configurable
 public class Mecanum {
     Follower follower;
-    public static Pose startPose;
     Gamepad g;
     IMU imu;
     ElapsedTime timer = new ElapsedTime();
 
     public Mecanum(LinearOpMode lom) {
         follower = Constants.createFollower(lom.hardwareMap);
-        follower.setStartingPose(startPose == null ? new Pose() : startPose);
+        follower.setStartingPose(new Pose(72,72,Math.toRadians(90)));
         follower.update();
         follower.startTeleOpDrive();
         g = lom.gamepad1;
@@ -42,10 +41,11 @@ public class Mecanum {
             imu.resetYaw();
 
     }
-
-    public double getDistanceToGoal(Pose goalPose) {
-        return follower.getPose().distanceFrom(goalPose);
+    public void loadStartPose(){
+        follower.setStartingPose(GlobalStorage.lastPose);
     }
+    public Pose getPose(){return follower.getPose();}
+
 
     public void ResetTimer() {
         timer.reset();

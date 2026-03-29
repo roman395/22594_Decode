@@ -22,8 +22,8 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
  * This has been refactored to a sequential LinearOpMode structure for clarity and reliability,
  * and now properly integrates the Shooter and Intake modules.
  */
-@Autonomous(name = "NW blue smart", group = "Autonomous")
-public class AutoNWBlueSmart extends LinearOpMode {
+@Autonomous(name = "NW red smart", group = "Autonomous")
+public class AutoNWRedSmart extends LinearOpMode {
     private TelemetryManager panelsTelemetry;
     public Follower follower;
     private Shooter shooter;
@@ -33,8 +33,8 @@ public class AutoNWBlueSmart extends LinearOpMode {
     private ElapsedTime timer = new ElapsedTime();
 
     // The AprilTag ID for the red alliance backdrop
-    private static final int APRILTAG_TARGET_ID = 20;
-    private static final Pose goal = new Pose(15, 135);
+    private static final int APRILTAG_TARGET_ID = 24;
+    private static final Pose goal = new Pose(130,132);
 
     @Override
     public void runOpMode() {
@@ -47,7 +47,7 @@ public class AutoNWBlueSmart extends LinearOpMode {
         myPath = new Paths(follower);
 
         // Set the starting pose for the robot
-        follower.setStartingPose(new Pose(25.9, 127.6, Math.toRadians(135)));
+        follower.setStartingPose(new Pose(118.1, 127.6, Math.toRadians(45)));
 
         panelsTelemetry.debug("Status", "Initialized and Ready");
         panelsTelemetry.update(telemetry);
@@ -55,8 +55,9 @@ public class AutoNWBlueSmart extends LinearOpMode {
         turret.resetStartPose();
 
         if (isStopRequested()) return;
+
         follower.followPath(myPath.shootpreload);
-        turret.setTargetPose(-10);
+        turret.setTargetPose(5);
         waitUntilPathDone();
         waitUntilShootingDone();
 
@@ -64,8 +65,8 @@ public class AutoNWBlueSmart extends LinearOpMode {
         waitUntilPathDoneTaking();
 
         follower.followPath(myPath.shootspike1);
-        shooter.startSpooling(1500);
-        turret.setTargetPose(60);
+        shooter.startSpooling(1600);
+        turret.setTargetPose(280);
         waitUntilPathDoneTaking();
         waitUntilShootingDone();
 
@@ -73,8 +74,8 @@ public class AutoNWBlueSmart extends LinearOpMode {
         waitUntilPathDoneTaking();
 
         follower.followPath(myPath.shootspike2);
-        shooter.startSpooling(1500);
-        turret.setTargetPose(40);
+        shooter.startSpooling(1800);
+        turret.setTargetPose(260);
         waitUntilPathDoneTaking();
         waitUntilShootingDone();
 
@@ -82,19 +83,20 @@ public class AutoNWBlueSmart extends LinearOpMode {
         waitUntilPathDoneTaking();
         follower.followPath(myPath.smallLeave);
         waitUntilPathDoneTaking();
-        waitUntilTime(1000 );
+        waitUntilTime(1000);
 
         follower.followPath(myPath.shootsmart);
-        shooter.startSpooling(1500);
-        turret.setTargetPose(10);
+        shooter.startSpooling(2000);
+        turret.setTargetPose(5);
         waitUntilPathDoneTaking();
         waitUntilShootingDone();
+
     }
 
     private void waitUntilPathDoneTaking() {
         while (opModeIsActive() && follower.isBusy()) {
-            shooter.updateSpooling();
             follower.update();
+            shooter.updateSpooling();
             intake.grabbingAutonomous();
             turret.saveData();
             GlobalStorage.lastPose = follower.getPose();
@@ -109,7 +111,9 @@ public class AutoNWBlueSmart extends LinearOpMode {
             turret.saveData();
             GlobalStorage.lastPose = follower.getPose();
         }
+
     }
+
 
 
     private void waitUntilShootingDone() {
@@ -134,6 +138,7 @@ public class AutoNWBlueSmart extends LinearOpMode {
     }
 
 
+
     public static class Paths {
         public PathChain shootpreload;
         public PathChain takespike1;
@@ -143,96 +148,85 @@ public class AutoNWBlueSmart extends LinearOpMode {
         public PathChain takesmart;
         public PathChain smallLeave;
         public PathChain shootsmart;
-        public PathChain leave;
 
         public Paths(Follower follower) {
             shootpreload = follower.pathBuilder().addPath(
                             new BezierLine(
-                                    new Pose(25.981, 127.655),
+                                    new Pose(118.100, 127.600),
 
-                                    new Pose(41.431, 111.036)
+                                    new Pose(102.569, 111.036)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(135), Math.toRadians(135))
+                    ).setLinearHeadingInterpolation(Math.toRadians(45), Math.toRadians(60))
 
                     .build();
 
             takespike1 = follower.pathBuilder().addPath(
                             new BezierCurve(
-                                    new Pose(41.431, 111.036),
-                                    new Pose(64.458, 77.450),
-                                    new Pose(12.000, 80.642)
+                                    new Pose(102.569, 111.036),
+                                    new Pose(79.542, 77.450),
+                                    new Pose(128.000, 80.642)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(135), Math.toRadians(180))
+                    ).setLinearHeadingInterpolation(Math.toRadians(60), Math.toRadians(0))
 
                     .build();
 
             shootspike1 = follower.pathBuilder().addPath(
                             new BezierLine(
-                                    new Pose(12.000, 80.642),
+                                    new Pose(132.000, 80.642),
 
-                                    new Pose(40.339, 92.569)
+                                    new Pose(103.661, 92.569)
                             )
-                    ).setConstantHeadingInterpolation(Math.toRadians(180))
+                    ).setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(-30))
 
                     .build();
 
             takespike2 = follower.pathBuilder().addPath(
                             new BezierCurve(
-                                    new Pose(40.339, 92.569),
-                                    new Pose(64.872, 56.358),
-                                    new Pose(8.000, 60.904)
+                                    new Pose(103.661, 92.569),
+                                    new Pose(79.128, 56.358),
+                                    new Pose(130.000, 60.904)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
+                    ).setLinearHeadingInterpolation(Math.toRadians(-30), Math.toRadians(0))
 
                     .build();
 
             shootspike2 = follower.pathBuilder().addPath(
                             new BezierCurve(
-                                    new Pose(8.000, 60.904),
-                                    new Pose(32.000, 67.322),
-                                    new Pose(43.477, 88.684)
+                                    new Pose(130.000, 60.904),
+                                    new Pose(112.000, 67.322),
+                                    new Pose(100.523, 88.684)
                             )
-                    ).setConstantHeadingInterpolation(Math.toRadians(180))
+                    ).setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(-30))
 
                     .build();
 
             takesmart = follower.pathBuilder().addPath(
                             new BezierCurve(
-                                    new Pose(43.477, 88.684),
-                                    new Pose(44.005, 63.991),
-                                    new Pose(6.567, 62.898)
+                                    new Pose(100.523, 88.684),
+                                    new Pose(99.995, 63.991),
+                                    new Pose(137.433, 62.898)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(135))
+                    ).setLinearHeadingInterpolation(Math.toRadians(-30), Math.toRadians(45))
 
                     .build();
 
             smallLeave = follower.pathBuilder().addPath(
                             new BezierLine(
-                                    new Pose(7.567, 62.898),
+                                    new Pose(137.433, 62.898),
 
-                                    new Pose(7.567, 58.898)
+                                    new Pose(136.433, 58.898)
                             )
-                    ).setConstantHeadingInterpolation(Math.toRadians(135))
+                    ).setConstantHeadingInterpolation(Math.toRadians(45))
 
                     .build();
 
             shootsmart = follower.pathBuilder().addPath(
                             new BezierLine(
-                                    new Pose(7.567, 58.898),
+                                    new Pose(136.433, 58.898),
 
-                                    new Pose(52.559, 105.143)
+                                    new Pose(85.596, 103.191)
                             )
-                    ).setConstantHeadingInterpolation(Math.toRadians(135))
-
-                    .build();
-
-            leave = follower.pathBuilder().addPath(
-                            new BezierLine(
-                                    new Pose(50.559, 83.143),
-
-                                    new Pose(47.339, 73.932)
-                            )
-                    ).setConstantHeadingInterpolation(Math.toRadians(135))
+                    ).setLinearHeadingInterpolation(Math.toRadians(45), Math.toRadians(65))
 
                     .build();
         }
