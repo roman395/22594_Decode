@@ -3,25 +3,28 @@ package org.firstinspires.ftc.teamcode.Modules;
 import com.qualcomm.hardware.rev.Rev2mDistanceSensor;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.teamcode.Configs.FeederConfig;
 import org.firstinspires.ftc.teamcode.StateMachine.IStateMachineCaller;
 import org.firstinspires.ftc.teamcode.StateMachine.RobotStates;
-import org.firstinspires.ftc.teamcode.Utils.HardwareNames;
+import org.firstinspires.ftc.teamcode.Configs.HardwareNames;
 import org.firstinspires.ftc.teamcode.Utils.MotorMaker;
 
 public class Feeder extends Module implements IStateMachineCaller {
   private DcMotor feederMotor;
   private Rev2mDistanceSensor distanceSensor;
   private double currentSensorDistance;
+  private Gamepad gamepad;
   
   public Feeder(LinearOpMode linearOpMode) {
     feederMotor = new MotorMaker(HardwareNames.FeederMotor, linearOpMode)
         .setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE)
         .build();
     distanceSensor = linearOpMode.hardwareMap.get(Rev2mDistanceSensor.class, HardwareNames.RevDistanceSensor);
+    gamepad = linearOpMode.gamepad1;
   }
   
   @Override
@@ -36,10 +39,16 @@ public class Feeder extends Module implements IStateMachineCaller {
   
   @Override
   public void onCall(RobotStates state) {
-  
+    if (state == RobotStates.SHOOTING || state == RobotStates.INTAKING)
+      feederMotor.setPower(gamepad.left_bumper ? 1 : 0);
+    else
+      feederMotor.setPower(0);
   }
+  
   @Override
-  public RobotStates requestState() {
+  public RobotStates requestState(RobotStates currentState) {
+    if(currentSensorDistance < FeederConfig.distanceWhenEmpty && currentState == RobotStates.INTAKING)
+      return RobotStates.BALL_IN_FEEDER;
     return null;
   }
   
