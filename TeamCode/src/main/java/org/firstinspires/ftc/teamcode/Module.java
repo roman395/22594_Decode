@@ -6,10 +6,8 @@ public abstract class Module {
   public Module() {
   }
   
-  public void update() {
-  }
+  public abstract void update();
   
-  public void addTelemetry(Telemetry telemetry) {
-  }
+  public abstract void addTelemetry(Telemetry telemetry);
   
 }
