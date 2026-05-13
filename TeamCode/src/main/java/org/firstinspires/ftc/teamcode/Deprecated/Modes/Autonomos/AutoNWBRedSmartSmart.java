@@ -11,7 +11,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.Deprecated.Modules.GlobalStorage;
+import org.firstinspires.ftc.teamcode.GlobalStorage;
 import org.firstinspires.ftc.teamcode.Deprecated.Modules.Intake;
 import org.firstinspires.ftc.teamcode.Deprecated.Modules.Shooter;
 import org.firstinspires.ftc.teamcode.Deprecated.Modules.Turret;

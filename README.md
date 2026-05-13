@@ -250,7 +250,7 @@ The readme.md file located in the [/TeamCode/src/main/java/org/firstinspires/ftc
 * Changes the way that camera controls behave for a SwitchableCamera. Now, each method (such as getExposure, getMinExposure, getMaxExposure, setExposure for ExposureControl) acts on the currently active camera.
 * Adds support for the REV USB PS4 Compatible Gamepad (REV-31-2983)
 * Adds ConceptAprilTagMultiPortal OpMode
-* Adds support for OctoQuad Quadrature Encoder & Pulse Width Interface Module
+* Adds support for OctoQuad Quadrature Encoder & Pulse Width Interface org.firstinspires.ftc.teamcode.Module
 * Adds the ExportAprilTagLibraryToBlocks annotation that indicates that a static method that returns an AprilTagLibrary is exported to the Blocks programming environment. The corresponding block will appear in the Blocks toolbox along with the built-in tag libraries.
 * Adds Blocks OpMode ConceptAprilTagOptimizeExposure.
 * Adds support for the SparkFun Optical Tracking Odometry sensor.
@@ -1642,7 +1642,7 @@ Changes include:
   - More explicit messages during USB failures.
   - Fixed bug so that USB device is closed if event loop teardown method was not called.
  * Fixed timer UI issue
- * Fixed duplicate name UI bug (Legacy Module configuration).
+ * Fixed duplicate name UI bug (Legacy org.firstinspires.ftc.teamcode.Module configuration).
  * Fixed race condition in EventLoopManager.
  * Fix to keep references stable when updating gamepad.
  * For legacy Matrix motor/servo controllers removed necessity of appending "Motor" and "Servo" to controller names.
@@ -1679,6 +1679,6 @@ Changes include:
  * A new LinearOpMode class is introduced.
    - Teams can use the LinearOpMode mode to create a linear (not event driven) program model.
    - Teams can use blocking statements like Thread.sleep() within a linear OpMode.
- * The API for the Legacy Module and Core Device Interface Module have been updated.
-   - Support for encoders with the Legacy Module is now working.
+ * The API for the Legacy org.firstinspires.ftc.teamcode.Module and Core Device Interface org.firstinspires.ftc.teamcode.Module have been updated.
+   - Support for encoders with the Legacy org.firstinspires.ftc.teamcode.Module is now working.
  * The hardware loop has been updated for better performance.

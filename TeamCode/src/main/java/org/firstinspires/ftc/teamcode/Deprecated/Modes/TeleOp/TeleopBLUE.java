@@ -5,7 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import org.firstinspires.ftc.teamcode.Deprecated.Modules.GlobalStorage;
+import org.firstinspires.ftc.teamcode.GlobalStorage;
 import org.firstinspires.ftc.teamcode.Deprecated.Modules.Intake;
 import org.firstinspires.ftc.teamcode.Deprecated.Modules.Mecanum;
 import org.firstinspires.ftc.teamcode.Deprecated.Modules.Shooter;
