@@ -15,7 +15,7 @@ import org.firstinspires.ftc.teamcode.Deprecated.Modules.GlobalStorage;
 import org.firstinspires.ftc.teamcode.Deprecated.Modules.Intake;
 import org.firstinspires.ftc.teamcode.Deprecated.Modules.Shooter;
 import org.firstinspires.ftc.teamcode.Deprecated.Modules.Turret;
-import org.firstinspires.ftc.teamcode.Deprecated.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 /**
  * Autonomous OpMode for the Big Red configuration, using Pedro Pathing.
