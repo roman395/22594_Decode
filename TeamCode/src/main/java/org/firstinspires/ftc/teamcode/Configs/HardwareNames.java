@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Utils;
+package org.firstinspires.ftc.teamcode.Configs;
 
 public class HardwareNames {
   public static final String DriveFLM = "FLM",
