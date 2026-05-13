@@ -7,7 +7,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl;
-import org.firstinspires.ftc.teamcode.GlobalStorage;
+import org.firstinspires.ftc.teamcode.Utils.GlobalStorage;
 import org.firstinspires.ftc.teamcode.Deprecated.Modules.Mecanum;
 import org.firstinspires.ftc.teamcode.Deprecated.Modules.Shooter;
 import org.firstinspires.ftc.teamcode.Deprecated.Modules.Turret;

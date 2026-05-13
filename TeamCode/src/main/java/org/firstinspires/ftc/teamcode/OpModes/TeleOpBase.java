@@ -1,6 +1,8 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.OpModes;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+
+import org.firstinspires.ftc.teamcode.Modules.Drivetrain;
 
 public abstract class TeleOpBase extends LinearOpMode {
   Drivetrain drivetrain;
