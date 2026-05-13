@@ -11,19 +11,19 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 public class Drivetrain extends Module {
-  Follower follower;
-  Gamepad gamepad;
-  IMU imu;
-  float X_DEBUG_START_POSE = 72, Y_DEBUG_START_POSE = 72, ANGLE_DEBUG_START_POSE = 90;
-  String IMU_HARDWARE_NAME = "imu";
+  private final Follower follower;
+  private final Gamepad gamepad;
+  private final IMU imu;
+  private final float X_DEBUG_START_POSE = 72, Y_DEBUG_START_POSE = 72, ANGLE_DEBUG_START_POSE = 90;
+  private final String IMU_HARDWARE_NAME = "imu";
   
   public Drivetrain(LinearOpMode linearOpMode) {
+    gamepad = linearOpMode.gamepad1;
     follower = Constants.createFollower(linearOpMode.hardwareMap);
     follower.setStartingPose(new Pose(X_DEBUG_START_POSE, Y_DEBUG_START_POSE, Math.toRadians(ANGLE_DEBUG_START_POSE)));
     follower.update();
     follower.startTeleOpDrive();
     follower.setTeleOpDrive(-gamepad.left_stick_y, -gamepad.left_stick_x, -(gamepad.right_trigger - gamepad.left_trigger) * 0.5, true);
-    gamepad = linearOpMode.gamepad1;
     imu = linearOpMode.hardwareMap.get(IMU.class, IMU_HARDWARE_NAME);
     imu.initialize(new IMU.Parameters(new RevHubOrientationOnRobot(
         RevHubOrientationOnRobot.LogoFacingDirection.RIGHT,
