@@ -47,7 +47,7 @@ public class Feeder extends Module implements IStateMachineCaller {
   
   @Override
   public RobotStates requestState(RobotStates currentState) {
-    if(currentSensorDistance < FeederConfig.distanceWhenEmpty && currentState == RobotStates.INTAKING)
+    if (currentSensorDistance < FeederConfig.distanceWhenEmpty && currentState == RobotStates.INTAKING)
       return RobotStates.BALL_IN_FEEDER;
     return null;
   }
