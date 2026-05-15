@@ -33,7 +33,8 @@ public class Shooter extends Module implements IStateMachineCaller {
   @Override
   public void update() {
     currentVelocity = rightMotor.getVelocity();
-    targetVelocity = camera.getDistance();
+    if (camera.getDistance() != -404)
+      targetVelocity = camera.getDistance();
   }
   
   @Override
