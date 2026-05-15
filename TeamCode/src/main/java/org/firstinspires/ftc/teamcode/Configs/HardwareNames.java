@@ -15,6 +15,7 @@ public class HardwareNames {
       TurretServoEncoder1 = "tServoEn1",
       TurretServoEncoder2 = "tServoEn2",
       RevDistanceSensor = "sensor",
+      LimeLight = "limelight",
       ShootServo = "shootS",
       ShootLeft = "shootL",
       ShootRight = "shootR";
