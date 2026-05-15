@@ -6,13 +6,11 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 public class MotorMaker {
-  private DcMotor motor;
-  private DcMotorEx motorEx;
-  private String motorName;
+  private final String motorName;
   private DcMotor.ZeroPowerBehavior zeroPowerBehavior = DcMotor.ZeroPowerBehavior.FLOAT;
   private DcMotor.RunMode runMode = DcMotor.RunMode.RUN_WITHOUT_ENCODER;
   private DcMotorSimple.Direction direction = DcMotorSimple.Direction.FORWARD;
-  private LinearOpMode linearOpMode;
+  private final LinearOpMode linearOpMode;
   
   public MotorMaker(String motorName, LinearOpMode linearOpMode) {
     this.motorName = motorName;
@@ -35,7 +33,7 @@ public class MotorMaker {
   }
   
   public DcMotor build() {
-    motor = linearOpMode.hardwareMap.get(DcMotor.class, motorName);
+    DcMotor motor = linearOpMode.hardwareMap.get(DcMotor.class, motorName);
     motor.setMode(runMode);
     motor.setZeroPowerBehavior(zeroPowerBehavior);
     motor.setDirection(direction);
@@ -43,7 +41,7 @@ public class MotorMaker {
   }
   
   public DcMotor buildEx() {
-    motorEx = linearOpMode.hardwareMap.get(DcMotorEx.class, motorName);
+    DcMotorEx motorEx = linearOpMode.hardwareMap.get(DcMotorEx.class, motorName);
     motorEx.setMode(runMode);
     motorEx.setZeroPowerBehavior(zeroPowerBehavior);
     motorEx.setDirection(direction);
