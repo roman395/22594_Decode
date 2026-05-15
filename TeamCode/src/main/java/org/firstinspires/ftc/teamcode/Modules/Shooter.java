@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.Camera.Camera;
 import org.firstinspires.ftc.teamcode.Configs.HardwareNames;
 import org.firstinspires.ftc.teamcode.Configs.ShooterConfig;
 import org.firstinspires.ftc.teamcode.StateMachine.IStateMachineCaller;
@@ -13,11 +14,12 @@ import org.firstinspires.ftc.teamcode.Utils.MotorMaker;
 import org.firstinspires.ftc.teamcode.Utils.PID;
 
 public class Shooter extends Module implements IStateMachineCaller {
-  private DcMotorEx leftMotor, rightMotor;
+  private final DcMotorEx leftMotor, rightMotor;
   private double currentVelocity, targetVelocity;
-  private PID pidRegulator = new PID(ShooterConfig.COEFFICIENTS);
+  private final PID pidRegulator = new PID(ShooterConfig.COEFFICIENTS);
+  private final Camera camera;
   
-  public Shooter(LinearOpMode linearOpMode) {
+  public Shooter(LinearOpMode linearOpMode, Camera camera) {
     leftMotor = new MotorMaker(HardwareNames.ShootLeft, linearOpMode)
         .setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE)
         .buildEx();
@@ -25,11 +27,13 @@ public class Shooter extends Module implements IStateMachineCaller {
     rightMotor = new MotorMaker(HardwareNames.ShootRight, linearOpMode)
         .setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE)
         .buildEx();
+    this.camera = camera;
   }
   
   @Override
   public void update() {
     currentVelocity = rightMotor.getVelocity();
+    targetVelocity = camera.getDistance();
   }
   
   @Override
