@@ -40,7 +40,7 @@ public class MotorMaker {
     return motor;
   }
   
-  public DcMotor buildEx() {
+  public DcMotorEx buildEx() {
     DcMotorEx motorEx = linearOpMode.hardwareMap.get(DcMotorEx.class, motorName);
     motorEx.setMode(runMode);
     motorEx.setZeroPowerBehavior(zeroPowerBehavior);
