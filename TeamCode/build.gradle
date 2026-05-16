@@ -22,6 +22,9 @@ android {
         minSdk 24
     }
     packagingOptions {
+        jniLibs {
+            pickFirsts += ['**/*.so']
+        }
         jniLibs.useLegacyPackaging true
     }
 }
