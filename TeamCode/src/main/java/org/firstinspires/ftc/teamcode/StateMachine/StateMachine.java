@@ -54,7 +54,7 @@ public class StateMachine {
       case SPOOLING:
         if (requestStates.contains(RobotStates.READY_TO_SHOOT))
           currentState = RobotStates.SHOOTING;
-        if (gamepad.squareWasPressed())
+        if (gamepad.square)
           currentState = RobotStates.IDLE;
         break;
       case SHOOTING:

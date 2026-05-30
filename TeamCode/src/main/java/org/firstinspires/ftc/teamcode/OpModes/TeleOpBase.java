@@ -29,7 +29,7 @@ public abstract class TeleOpBase extends LinearOpMode {
     intake = new Intake(this);
     feeder = new Feeder(this);
     limeLightCamera = new LimeLightCamera(getAllianceAprilTagID(), this);
-    turret = new Turret(this, limeLightCamera, getGoalPose());
+    //turret = new Turret(this, limeLightCamera, getGoalPose());
     shooter = new Shooter(this, limeLightCamera);
     
     machine.addListener(intake);

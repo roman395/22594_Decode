@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.OpModes;
 
+import com.bylazar.telemetry.PanelsTelemetry;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -12,11 +13,12 @@ public class TeleOpAllTelemetry extends TeleOpBase {
   
   @Override
   public void addTelemetry(){
+    telemetry= PanelsTelemetry.INSTANCE.getFtcTelemetry();
     machine.addTelemetry(telemetry);
     shooter.addTelemetry(telemetry);
     intake.addTelemetry(telemetry);
     feeder.addTelemetry(telemetry);
-    turret.addTelemetry(telemetry);
+    //turret.addTelemetry(telemetry);
     drivetrain.addTelemetry(telemetry);
     limeLightCamera.addTelemetry(telemetry);
   }

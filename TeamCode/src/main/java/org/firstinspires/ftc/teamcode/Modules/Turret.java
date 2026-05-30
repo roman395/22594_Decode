@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.Camera.Camera;
@@ -14,9 +15,10 @@ import org.firstinspires.ftc.teamcode.StateMachine.IStateMachineCaller;
 import org.firstinspires.ftc.teamcode.StateMachine.RobotStates;
 import org.firstinspires.ftc.teamcode.Utils.GlobalStorage;
 import org.firstinspires.ftc.teamcode.Utils.PID;
+//TODO: make servo continuous and make turret work
 
 public class Turret extends Module implements IStateMachineCaller {
-  private final CRServo servo1, servo2;
+  private final Servo servo1, servo2;
   private final AnalogInput servoEncoder;
   private final Camera camera;
   private double headingError = 0;
@@ -28,25 +30,27 @@ public class Turret extends Module implements IStateMachineCaller {
   private boolean isBlocked = false;
   
   public Turret(LinearOpMode linearOpMode, Camera camera, Pose goalPose) {
-    servo1 = linearOpMode.hardwareMap.get(CRServo.class, HardwareNames.TurretServo1);
-    servo2 = linearOpMode.hardwareMap.get(CRServo.class, HardwareNames.TurretServo2);
+    servo1 = linearOpMode.hardwareMap.get(Servo.class, HardwareNames.TurretServo1);
+    servo2 = linearOpMode.hardwareMap.get(Servo.class, HardwareNames.TurretServo2);
     servoEncoder = linearOpMode.hardwareMap.get(AnalogInput.class, HardwareNames.TurretServoEncoder1);
     this.camera = camera;
     this.goalPose = goalPose;
     
-    servo1.setDirection(DcMotorSimple.Direction.REVERSE);
-    servo2.setDirection(DcMotorSimple.Direction.REVERSE);
+    //servo1.setDirection(DcMotorSimple.Direction.REVERSE);
+    //servo2.setDirection(DcMotorSimple.Direction.REVERSE);
   }
   
   @Override
   public void update() {
     headingError = camera.getXHeading();
     currentVoltage = servoEncoder.getVoltage();
+    servo1.setPosition(TurretConfig.static_pos);
   }
   
   @Override
   public void addTelemetry(Telemetry telemetry) {
-  
+    telemetry.addData("turret servo 1 pos", servo1.getPosition());
+    telemetry.addData("turret servo 2 pos", servo2.getPosition());
   }
   
   public void saveData() {

@@ -3,6 +3,8 @@ package org.firstinspires.ftc.teamcode.Modules;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.Camera.Camera;
@@ -15,6 +17,7 @@ import org.firstinspires.ftc.teamcode.Utils.PID;
 
 public class Shooter extends Module implements IStateMachineCaller {
   private final DcMotorEx leftMotor, rightMotor;
+  private final Servo wallServo;
   private double currentVelocity, targetVelocity;
   private final PID pidRegulator = new PID(ShooterConfig.COEFFICIENTS);
   private final Camera camera;
@@ -22,19 +25,27 @@ public class Shooter extends Module implements IStateMachineCaller {
   public Shooter(LinearOpMode linearOpMode, Camera camera) {
     leftMotor = new MotorMaker(HardwareNames.ShootLeft, linearOpMode)
         .setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE)
+        .setRunMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER)
+        .setDirection(DcMotorSimple.Direction.REVERSE)
         .buildEx();
     //Set as master for pid calculation
     rightMotor = new MotorMaker(HardwareNames.ShootRight, linearOpMode)
         .setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE)
+        .setRunMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER)
+        .setDirection(DcMotorSimple.Direction.REVERSE)
         .buildEx();
+    wallServo = linearOpMode.hardwareMap.get(Servo.class, HardwareNames.ShootServo);
     this.camera = camera;
   }
   
   @Override
   public void update() {
-    currentVelocity = rightMotor.getVelocity();
-    if (camera.getDistance() != -404)
-      targetVelocity = camera.getDistance();
+    //because of reverse
+    currentVelocity = -rightMotor.getVelocity();
+    if (camera.getDistance() != -404) {
+      targetVelocity = ShooterCalculator.distToVelocityApprox(camera.getDistance());
+      wallServo.setPosition(ShooterCalculator.distToWallPos(camera.getDistance()));
+    }
   }
   
   @Override
@@ -46,9 +57,13 @@ public class Shooter extends Module implements IStateMachineCaller {
   @Override
   public void onCall(RobotStates state) {
     if (state == RobotStates.SPOOLING || state == RobotStates.SHOOTING) {
-      double power = pidRegulator.calculateVelocity(currentVelocity - targetVelocity, targetVelocity);
+      double power = pidRegulator.calculateVelocity(targetVelocity - currentVelocity, targetVelocity);
       leftMotor.setPower(power);
       rightMotor.setPower(power);
+    }
+    else {
+      leftMotor.setPower(0);
+      rightMotor.setPower(0);
     }
   }
   
