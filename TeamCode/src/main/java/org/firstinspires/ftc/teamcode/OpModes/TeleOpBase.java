@@ -42,6 +42,11 @@ public abstract class TeleOpBase extends LinearOpMode {
     while (opModeIsActive()) {
       drivetrain.update();
       machine.update();
+      intake.update();
+      feeder.update();
+      limeLightCamera.update();
+      turret.update();
+      shooter.update();
       addTelemetry();
       telemetry.update();
     }
