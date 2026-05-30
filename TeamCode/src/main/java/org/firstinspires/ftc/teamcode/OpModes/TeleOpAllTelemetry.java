@@ -7,7 +7,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 public class TeleOpAllTelemetry extends TeleOpBase {
   @Override
   public int getAllianceAprilTagID() {
-    return 24;
+    return 23;
   }
   
   @Override
@@ -22,7 +22,7 @@ public class TeleOpAllTelemetry extends TeleOpBase {
   
   @Override
   public Pose getGoalPose() {
-    return null;
+    return new Pose(0,0,0);
   }
   
 }
