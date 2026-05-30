@@ -34,10 +34,13 @@ public class Intake extends Module implements IStateMachineCaller {
   
   @Override
   public void onCall(RobotStates state) {
-    if (state != RobotStates.SPOOLING)
+    if (state != RobotStates.SPOOLING && gamepad.right_bumper)
       intakeMotor.setPower(gamepad.right_bumper ? IntakeConfig.MAX_INTAKE_SPEED : 0);
-    else
+    else if ( gamepad.left_bumper) {
+      intakeMotor.setPower(gamepad.left_bumper ? -IntakeConfig.MAX_INTAKE_SPEED : 0);
+    } else
       intakeMotor.setPower(0);
+    
   }
   
   @Override
