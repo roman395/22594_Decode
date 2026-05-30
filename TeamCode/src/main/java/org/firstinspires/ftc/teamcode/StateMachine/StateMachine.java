@@ -35,8 +35,10 @@ public class StateMachine {
     
     switch (currentState) {
       case IDLE:
-        if (gamepad.right_bumper || gamepad.left_bumper)
+        if ((gamepad.right_bumper || gamepad.left_bumper) && !requestStates.contains(RobotStates.BALL_IN_FEEDER))
           currentState = RobotStates.INTAKING;
+        else if (requestStates.contains(RobotStates.BALL_IN_FEEDER))
+          currentState = RobotStates.INTAKING_WITH_BALL_IN;
         break;
       case INTAKING:
         if (requestStates.contains(RobotStates.BALL_IN_FEEDER))
@@ -65,6 +67,7 @@ public class StateMachine {
   }
   public void addTelemetry(Telemetry telemetry){
     telemetry.addData("Current state", currentState);
+    telemetry.addData("Request states", requestStates);
   }
   
 }
