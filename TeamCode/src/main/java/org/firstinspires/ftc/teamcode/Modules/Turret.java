@@ -10,10 +10,12 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.Camera.Camera;
 import org.firstinspires.ftc.teamcode.Configs.HardwareNames;
 import org.firstinspires.ftc.teamcode.Configs.TurretConfig;
+import org.firstinspires.ftc.teamcode.StateMachine.IStateMachineCaller;
+import org.firstinspires.ftc.teamcode.StateMachine.RobotStates;
 import org.firstinspires.ftc.teamcode.Utils.GlobalStorage;
 import org.firstinspires.ftc.teamcode.Utils.PID;
 
-public class Turret extends Module {
+public class Turret extends Module implements IStateMachineCaller {
   private final CRServo servo1, servo2;
   private final AnalogInput servoEncoder;
   private final Camera camera;
@@ -56,5 +58,14 @@ public class Turret extends Module {
     centerPose = GlobalStorage.lastTurretCenterPose;
     countOfFullTurns = GlobalStorage.lastTurretFullTurns;
   }
-  
+
+  @Override
+  public void onCall(RobotStates state) {
+
+  }
+
+  @Override
+  public RobotStates requestState(RobotStates currentState) {
+    return null;
+  }
 }
