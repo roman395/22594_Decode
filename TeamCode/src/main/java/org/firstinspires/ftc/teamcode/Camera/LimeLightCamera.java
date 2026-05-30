@@ -5,6 +5,7 @@ import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.Configs.HardwareNames;
@@ -12,7 +13,6 @@ import org.firstinspires.ftc.teamcode.Configs.HardwareNames;
 public class LimeLightCamera extends Camera {
   Limelight3A limelight3A;
   LLResultTypes.FiducialResult lastResult;
-  
   public LimeLightCamera(int tagId, LinearOpMode linearOpMode) {
     super(tagId);
     limelight3A = linearOpMode.hardwareMap.get(Limelight3A.class, HardwareNames.LimeLight);
@@ -28,6 +28,7 @@ public class LimeLightCamera extends Camera {
         break;
     }
     limelight3A.reloadPipeline();
+    limelight3A.start();
   }
   
   @Override
@@ -54,5 +55,8 @@ public class LimeLightCamera extends Camera {
       return lastResult.getTargetPoseCameraSpace().getOrientation().getYaw(AngleUnit.DEGREES);
     return -404;
   }
-  
+  public void addTelemetry(Telemetry telemetry){
+    telemetry.addData("Camera distance", getDistance());
+    telemetry.addData("Camera x heading", getXHeading());
+  }
 }
