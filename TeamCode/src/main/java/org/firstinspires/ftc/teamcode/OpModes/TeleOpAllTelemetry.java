@@ -3,7 +3,7 @@ package org.firstinspires.ftc.teamcode.OpModes;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-@TeleOp(group = "OpModes", name = "RED_TeleOp")
+@TeleOp(group = "Debug", name = "DEBUG_TeleOp")
 public class TeleOpAllTelemetry extends TeleOpBase {
   @Override
   public int getAllianceAprilTagID() {
