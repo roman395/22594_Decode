@@ -24,7 +24,6 @@ public class Drivetrain extends Module {
     follower.setStartingPose(new Pose(X_DEBUG_START_POSE, Y_DEBUG_START_POSE, Math.toRadians(ANGLE_DEBUG_START_POSE)));
     follower.update();
     follower.startTeleOpDrive();
-    follower.setTeleOpDrive(-gamepad.left_stick_y, -gamepad.left_stick_x, -(gamepad.right_trigger - gamepad.left_trigger) * 0.5, true);
     imu = linearOpMode.hardwareMap.get(IMU.class, IMU_HARDWARE_NAME);
     imu.initialize(new IMU.Parameters(new RevHubOrientationOnRobot(
         RevHubOrientationOnRobot.LogoFacingDirection.RIGHT,
@@ -35,6 +34,7 @@ public class Drivetrain extends Module {
   @Override
   public void update() {
     follower.update();
+    follower.setTeleOpDrive(-gamepad.left_stick_y, -gamepad.left_stick_x, -(gamepad.right_trigger - gamepad.left_trigger) * 0.5, true);
     if (gamepad.optionsWasPressed())
       imu.resetYaw();
     
