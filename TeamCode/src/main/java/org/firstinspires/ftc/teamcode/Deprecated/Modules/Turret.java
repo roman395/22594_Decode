@@ -224,7 +224,7 @@ public class Turret {
 
     public void saveData() {
         GlobalStorage.lastTurretCenterPose = centerPose;
-        GlobalStorage.lastTurretFullTurns = countOfFullTurn;
+        //GlobalStorage.lastTurretFullTurns = countOfFullTurn;
         GlobalStorage.lastDriftOffset = headingCorrection;
     }
 

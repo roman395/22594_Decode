@@ -3,6 +3,8 @@ package org.firstinspires.ftc.teamcode.StateMachine;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.Gamepad;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -60,6 +62,9 @@ public class StateMachine {
           currentState = RobotStates.IDLE;
         break;
     }
+  }
+  public void addTelemetry(Telemetry telemetry){
+    telemetry.addData("Current state", currentState);
   }
   
 }
