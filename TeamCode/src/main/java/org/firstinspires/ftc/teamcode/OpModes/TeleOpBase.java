@@ -34,8 +34,10 @@ public abstract class TeleOpBase extends LinearOpMode {
     machine.addListener(turret);
     machine.addListener(shooter);
     waitForStart();
-    drivetrain.update();
-    machine.update();
+    while (opModeIsActive()) {
+      drivetrain.update();
+      machine.update();
+    }
   }
   
   public abstract int getAllianceAprilTagID();
